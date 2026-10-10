@@ -18,22 +18,28 @@ does one written on the spot.
 
 ## 1. Which repo, which issue
 
+Every session runs on the operator's token, so they share GitHub's limits:
+a repo session never lists the whole board. One small query gives this
+repo's open issues with their board Status and Priority, Ready first, P1
+first, then P2, P3 and none, then the lowest number:
+
 ```sh
 repo=$(git remote get-url origin | sed -E 's#.*0xc0-labs/##; s#\.git$##')
-board=$(gh project item-list 1 --owner 0xc0-labs --limit 500 --format json)
+gh api graphql -f repo="$repo" -f query='query($repo: String!) {
+  repository(owner: "0xc0-labs", name: $repo) { issues(states: OPEN, first: 50) { nodes {
+    number title url
+    projectItems(first: 5) { nodes { project { number }
+      status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+      priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } } }' \
+  --jq '[.data.repository.issues.nodes[] | {number, title, url} + (.projectItems.nodes[] | select(.project.number == 1)
+    | {status: (.status.name // "-"), priority: (.priority.name // "--")})]
+    | sort_by((if .status == "Ready" then 0 else 1 end), ({"P1":1,"P2":2,"P3":3}[.priority] // 9), .number)
+    | .[] | "\(.number)\t\(.status)\t\(.priority)\t\(.url)\t\(.title)"'
 ```
 
 - **An issue named** (`/0xc0:work-issue 46`): that one, only if it is this
   repo's and Ready, or already In Progress from this session's earlier work.
-- **None named**: this repo's Ready issues, P1 first, then P2, P3 and none,
-  then the lowest number:
-
-  ```sh
-  jq -r --arg url "https://github.com/0xc0-labs/$repo" '
-    [.items[] | select(.repository == $url and .status == "Ready")]
-    | sort_by(({"P1":1,"P2":2,"P3":3}[.priority // ""] // 9), .content.number)
-    | .[] | "\(.content.number)\t\(.priority // "--")\t\(.content.url)\t\(.title)"' <<<"$board"
-  ```
+- **None named**: the first Ready one.
 
 - **Nothing Ready**: say so in one line and stop. The orchestrator messages
   this session when something turns Ready. Never take a Todo issue: Todo is
@@ -41,8 +47,8 @@ board=$(gh project item-list 1 --owner 0xc0-labs --limit 500 --format json)
 
 ## 2. Claim it
 
-Read its status again right before (another session may have taken it), then
-move it to In Progress. That move is the claim. Fields by name and the item
+Read its status again right before (another session may have taken it), that
+one issue alone, then move it to In Progress. That move is the claim. Fields by name and the item
 by its issue's URL, one field per call, no IDs to look up:
 
 ```sh
@@ -94,8 +100,9 @@ Blocked, report (step 6), and stop.
 
 ## 5. Check
 
-Watch the PR's checks (`gh pr checks <pr> --watch`, in the background). A
-failure within the issue's scope gets fixed; one outside it is reported.
+Watch the PR's checks in the background, at most once a minute, never every
+few seconds: `gh pr checks <pr> --watch --interval 60`. A failure within the
+issue's scope gets fixed; one outside it is reported.
 
 ## 6. Report
 
@@ -133,6 +140,19 @@ relate() {  # relate <owner/repo#n> <owner/repo#n>
   b=$(gh issue view "${2#*#}" -R "${2%#*}" --json id -q .id)
   gh api graphql -f query='mutation($a:ID!,$b:ID!){ addRelatesTo(input:{issueId:$a, relatedIssueId:$b}) { clientMutationId } }' -f a="$a" -f b="$b" >/dev/null
 }
+```
+
+### When GitHub rate-limits
+
+The sessions share the operator's token, and the limit that bites is the
+secondary one on bursts, where every request during the penalty extends it.
+On "rate limit" or "submitted too quickly" from any `gh` call: stop calling
+GitHub, say so, and wait in the background, until the reset when the hourly
+quota is spent, a few minutes otherwise. Then try once more. Never an
+immediate retry, never a loop. The quota, without spending it:
+
+```sh
+gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset | todate)"'
 ```
 
 ## Never

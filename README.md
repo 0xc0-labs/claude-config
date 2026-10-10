@@ -54,7 +54,12 @@ uses one. `hooks/tests/skills.sh` fails on either.
   session, with the rule that no work starts without an issue. In the
   workspace, the orchestrator's session, the whole board. In a repo's own
   session, that repo's Ready (by priority), In Progress and Blocked issues,
-  and only counts for the rest. `tests/board.sh` checks it from a fixture.
+  and only counts for the rest. Every session shares the operator's token and
+  so GitHub's limits: the board is read once for all of them, into
+  `~/.cache/0xc0/board.json` (or under `$XDG_CACHE_HOME`), reused for 120
+  seconds, with a lock so sessions starting together read it once. A failed
+  read leaves the last board with a note; a rate limit pauses reads for five
+  minutes. `tests/board.sh` checks it against a stand-in `gh`.
 - `no-apply.sh` — blocks `tofu/terraform apply|destroy`, and `ansible-playbook`
   or `scripts/ansible` without `--check`.
 - `guard-files.sh` — blocks touching the state, and writing a secrets file

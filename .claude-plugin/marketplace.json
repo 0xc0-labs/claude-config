@@ -12,7 +12,7 @@
       "displayName": "0xc0",
       "source": "./plugins/0xc0",
       "description": "Hooks, skills and guardrails for 0xc0-labs",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "sergioaten"
       }
