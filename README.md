@@ -5,7 +5,6 @@ Claude Code marketplace and plugin for the `0xc0-labs` organization.
 ```
 .claude-plugin/marketplace.json   the marketplace
 plugins/0xc0/                  the plugin
-  agents/                         5 agents
   skills/                         3 skills
   hooks/                          guardrails, commit and branch conventions, board loader
 ```
@@ -27,19 +26,6 @@ In the repo's `.claude/settings.json`:
 
 That declares and enables the plugin; each machine still installs it once, as
 described in **Installing** under Hooks.
-
-## Agents
-
-| Agent                  | Type      | What for                                   |
-|------------------------|-----------|--------------------------------------------|
-| `network-reviewer`     | read-only | validates network and firewall vs the transit matrix |
-| `iac-reviewer`         | read-only | OpenTofu, Packer, Ansible                  |
-| `drift-hunter`         | read-only | drift between real state and code          |
-| `infra-builder`        | builder   | implements in `infrastructure/`            |
-| `gitops-builder`       | builder   | implements in `gitops/`                    |
-
-The read-only ones cannot edit (`disallowedTools: Edit, Write`). The builders
-get closed specifications and stop if anything is ambiguous.
 
 ## Skills
 
