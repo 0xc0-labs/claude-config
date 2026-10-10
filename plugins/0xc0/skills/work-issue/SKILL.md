@@ -1,6 +1,6 @@
 ---
 name: work-issue
-description: A repo session's side of how the org works. Claims this repo's Ready issue of highest priority from the org board (or the one named), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <repo> "/0xc0:work-issue"`.
+description: A repo session's side of how the org works. Claims this repo's Ready issue of highest priority from the org board (or the one named), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`.
 ---
 
 # Working an issue in a repo session
@@ -10,6 +10,11 @@ started in one repo applies it. It works **that repo alone**, from **its
 issue**, up to a **draft PR**, and reports to the orchestrator. The
 orchestrator, a session named `orchestrator` in the workspace, writes the
 issues and owns what crosses repos.
+
+The session is named after its repo as Herdr names an agent: dots to dashes,
+a leading dot dropped (`github`, `offby1-cc`, `artistlabco-com`). Its shell
+can be zsh, where arrays start at 1: the snippets here use none, and neither
+does one written on the spot.
 
 ## 1. Which repo, which issue
 
@@ -27,7 +32,7 @@ board=$(gh project item-list 1 --owner 0xc0-labs --limit 500 --format json)
   jq -r --arg url "https://github.com/0xc0-labs/$repo" '
     [.items[] | select(.repository == $url and .status == "Ready")]
     | sort_by(({"P1":1,"P2":2,"P3":3}[.priority // ""] // 9), .content.number)
-    | .[] | "\(.id)\t\(.content.number)\t\(.priority // "--")\t\(.title)"' <<<"$board"
+    | .[] | "\(.content.number)\t\(.priority // "--")\t\(.content.url)\t\(.title)"' <<<"$board"
   ```
 
 - **Nothing Ready**: say so in one line and stop. The orchestrator messages
@@ -37,15 +42,16 @@ board=$(gh project item-list 1 --owner 0xc0-labs --limit 500 --format json)
 ## 2. Claim it
 
 Read its status again right before (another session may have taken it), then
-move it to In Progress. That move is the claim. IDs by name, never hardcoded:
+move it to In Progress. That move is the claim. Fields by name and the item
+by its issue's URL, one field per call, no IDs to look up:
 
 ```sh
-f=$(gh project field-list 1 --owner 0xc0-labs --format json)
-project=$(gh project view 1 --owner 0xc0-labs --format json --jq .id)
-status=$(jq -r '.fields[] | select(.name=="Status") | .id' <<<"$f")
-opt() { jq -r --arg n "$1" '.fields[] | select(.name=="Status") | .options[] | select(.name==$n) | .id' <<<"$f"; }
-gh project item-edit --project-id "$project" --id "$item" --field-id "$status" --single-select-option-id "$(opt 'In Progress')"
+issue=https://github.com/0xc0-labs/$repo/issues/$n
+gh issue view "$issue" --json projectItems --jq '.projectItems[] | select(.title=="0xc0-labs") | .status.name'
+gh project item-edit 1 --owner 0xc0-labs --url "$issue" --field Status --value "In Progress"
 ```
+
+Moving it to Blocked later is the same call, `--value Blocked`.
 
 ## 3. Read the contract
 
@@ -79,7 +85,12 @@ Blocked, report (step 6), and stop.
   and how, and the siblings with the merge order.
 - A follow-up the work turns up gets its own issue in this repo: titled by its
   outcome or problem, with its type, on the board as Todo, related to this one
-  (step 7, Relate).
+  (step 7, Relate):
+
+  ```sh
+  gh project item-add 1 --owner 0xc0-labs --url <issue-url>
+  gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Todo
+  ```
 
 ## 5. Check
 

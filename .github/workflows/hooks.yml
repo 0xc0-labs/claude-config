@@ -4,7 +4,7 @@ name: hooks
 on:
   pull_request:
     branches: [main]
-    paths: ['plugins/0xc0/hooks/**', '.github/workflows/hooks.yml']
+    paths: ['plugins/0xc0/hooks/**', 'plugins/0xc0/skills/**', '.github/workflows/hooks.yml']
 
 permissions:
   contents: read
