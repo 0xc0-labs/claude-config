@@ -49,12 +49,16 @@ everything, quoted, not linked**:
 <Vault writes, applies, approvals the change needs, or none>
 ```
 
-The title is a Conventional Commit subject, the same the PR will carry. The
-type follows it: `feat` is Feature, `fix` is Bug, anything else Task.
+The title says what must be true, or the problem, in a plain sentence:
+"Runners register without the App key on disk". No type prefix and no repo:
+the issue type (Feature, Bug or Task) and the board's Repository field carry
+them. The Conventional Commit belongs to the PR, written by the repo's session
+for the change it makes; the branch, the same in every repo of the change, is
+in each contract.
 
 ```sh
-gh issue create -R 0xc0-labs/workspace --title "<type>: <outcome>" --type <Type> --body-file <file>
-gh issue create -R 0xc0-labs/<repo> --title "<type>(<scope>): <subject>" --type <Type> \
+gh issue create -R 0xc0-labs/workspace --title "<outcome>" --type <Feature|Bug|Task> --body-file <file>
+gh issue create -R 0xc0-labs/<repo> --title "<this repo's part, as an outcome>" --type <Feature|Bug|Task> \
   --parent https://github.com/0xc0-labs/workspace/issues/<parent> --body-file <file>
 # Order: the downstream sub-issue is blocked by the upstream one.
 gh issue edit <n> -R 0xc0-labs/<downstream> --add-blocked-by https://github.com/0xc0-labs/<upstream>/issues/<m>

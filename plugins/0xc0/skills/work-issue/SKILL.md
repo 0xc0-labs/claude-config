@@ -56,7 +56,8 @@ gh issue view "$n" --comments --json title,body,comments,issueType,parent,blocke
 The comments count: later clarifications live there. The issue must give:
 
 - the outcome and the acceptance criteria;
-- the branch, or a title it follows from: `<type>/<slug>`;
+- the branch, for a change across repos (the same in every repo); for one
+  repo alone, `<type>/<slug>` from the change's commit type;
 - for a sub-issue of a change across repos, its siblings and merge order;
 - every "blocked by" closed.
 
@@ -72,11 +73,13 @@ Blocked, report (step 6), and stop.
 - This repo's `CLAUDE.md` and the workspace's rules: Conventional Commits, no
   tooling trailers, the branch from `origin/main` with the issue's name (the
   same in every repo of the change), the checks this repo runs locally.
-- Up to a **draft** PR: the title is the issue's title; the body has
-  `Closes #<n>`, what changed, what was checked and how, and the siblings with
-  the merge order.
-- A follow-up the work turns up gets its own issue in this repo, on the board
-  as Todo, related to this one (step 7, Relate).
+- Up to a **draft** PR. Its title is a Conventional Commit for the change
+  this PR makes, not the issue's title: the issue says what must be true, the
+  PR what changed. The body has `Closes #<n>`, what changed, what was checked
+  and how, and the siblings with the merge order.
+- A follow-up the work turns up gets its own issue in this repo: titled by its
+  outcome or problem, with its type, on the board as Todo, related to this one
+  (step 7, Relate).
 
 ## 5. Check
 
