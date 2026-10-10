@@ -11,8 +11,8 @@ and wakes, and owns integration. It edits the workspace repo and the board,
 **no other repo's files**: each repo's session does that, in its own tab.
 
 The session's shell can be zsh, where arrays start at 1: the snippets here
-use none, and neither does one written on the spot. For several issues, one
-`gh` call each, written out.
+use none, and neither does one written on the spot. Several issues are
+written out one by one, or go in one request (step 2).
 
 ## 1. Plan
 
@@ -68,14 +68,36 @@ gh issue create -R 0xc0-labs/<repo> --title "<this repo's part, as an outcome>" 
 gh issue edit <n> -R 0xc0-labs/<downstream> --add-blocked-by https://github.com/0xc0-labs/<upstream>/issues/<m>
 ```
 
-Every issue goes on the board as Todo, with a `Priority`. Fields by name and
-the item by its issue's URL, one field per call, no IDs to look up:
+Every issue goes on the board as Todo, with a `Priority`. Every session runs
+on the operator's token, so they share GitHub's limits: the fields of all the
+issues go in one request, not one call each. The project's and fields' IDs,
+once per run (they do not change; keep them from this output):
 
 ```sh
-gh project item-add 1 --owner 0xc0-labs --url <issue-url>
-gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Todo
-gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Priority --value P2
+gh api graphql -f query='{ organization(login: "0xc0-labs") { projectV2(number: 1) { id
+  fields(first: 30) { nodes { ... on ProjectV2SingleSelectField { id name options { id name } } } } } } }' \
+  --jq '.data.organization.projectV2 | "project \(.id)", (.fields.nodes[] | select(.name)
+    | "\(.name) \(.id): \([.options[] | "\(.name)=\(.id)"] | join(" "))")'
 ```
+
+Each issue onto the board, which gives its item's ID:
+
+```sh
+gh project item-add 1 --owner 0xc0-labs --url <issue-url> --format json --jq .id
+```
+
+Then every field of every issue in one request, an alias each:
+
+```sh
+gh api graphql -f query='mutation {
+  a: updateProjectV2ItemFieldValue(input: {projectId: "<project>", itemId: "<item-1>", fieldId: "<Status>", value: {singleSelectOptionId: "<Todo>"}}) { projectV2Item { id } }
+  b: updateProjectV2ItemFieldValue(input: {projectId: "<project>", itemId: "<item-1>", fieldId: "<Priority>", value: {singleSelectOptionId: "<P2>"}}) { projectV2Item { id } }
+  c: updateProjectV2ItemFieldValue(input: {projectId: "<project>", itemId: "<item-2>", fieldId: "<Status>", value: {singleSelectOptionId: "<Todo>"}}) { projectV2Item { id } }
+}'
+```
+
+One field of one issue, as in step 3, is one call by name:
+`gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field <Field> --value <Value>`.
 
 Relate, besides parent and "blocked by", what belongs together outside this
 change: the design issue behind it, an earlier change it builds on or fixes,
@@ -152,6 +174,19 @@ checked:
 The parent issue closes when its last sub-issue does: through the workspace's
 PR of the change when there is one, otherwise by hand, with a comment that
 lists the sub-issues and their PRs.
+
+## When GitHub rate-limits
+
+The sessions share the operator's token, and the limit that bites is the
+secondary one on bursts, where every request during the penalty extends it.
+On "rate limit" or "submitted too quickly" from any `gh` call: stop calling
+GitHub, say so, and wait in the background, until the reset when the hourly
+quota is spent, a few minutes otherwise. Then try once more. Never an
+immediate retry, never a loop. The quota, without spending it:
+
+```sh
+gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset | todate)"'
+```
 
 ## Never
 
