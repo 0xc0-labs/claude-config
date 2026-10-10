@@ -88,7 +88,20 @@ claude plugin marketplace add 0xc0-labs/claude-config
 claude plugin install 0xc0@0xc0-labs --scope project
 ```
 
-Then start a new session: plugins load at startup.
+Then start a new session: plugins load at startup. With `"autoUpdate": true`
+on the marketplace, as in this repo's `.claude/settings.json`, Claude Code
+refreshes it and updates the plugin in the background after startup; the
+next session, or `/reload-plugins`, loads the new version.
+
+## Versioning
+
+The plugin's version lives in `plugins/0xc0/.claude-plugin/plugin.json`
+alone: the marketplace entry declares none, since Claude Code takes
+`plugin.json`'s over it without warning. A session gets a new copy of the
+plugin only when that version changes, so **every change under
+`plugins/0xc0/` bumps `plugin.json`'s `version`**: that is what makes
+auto-updating sessions get it. The `plugin-version` workflow fails a PR that
+changes the plugin without a bump.
 
 ## Validate
 

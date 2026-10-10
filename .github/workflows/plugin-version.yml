@@ -1,0 +1,16 @@
+# A plugin change without a version bump never reaches the sessions that
+# auto-update it. The check itself lives in 0xc0-labs/.github. No path
+# filter: it runs on every PR, and passes when no plugin changed, so it can
+# be made required.
+name: plugin-version
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    uses: 0xc0-labs/.github/.github/workflows/plugin-version.yml@main
