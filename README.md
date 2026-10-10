@@ -51,9 +51,16 @@ get closed specifications and stop if anything is ambiguous.
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
-workspace's `docs/design.md`, How we work). A repo session starts working with
-`claude -n <repo> "/0xc0:work-issue"`. Skills tied to one repo live in that repo's `.claude/skills/`
-instead — see `infrastructure/`.
+workspace's `docs/design.md`, How we work). A session is named after its repo
+as Herdr names an agent, dots to dashes and a leading dot dropped (`github`,
+`offby1-cc`), and starts working with `claude -n <name> "/0xc0:work-issue"`;
+the workspace's is `orchestrator`. Skills tied to one repo live in that repo's
+`.claude/skills/` instead — see `infrastructure/`.
+
+Claude Code replaces a bare `$1`, `$2`… in a `SKILL.md` with words of the
+skill's arguments, so a snippet braces them, `"${1}"`, or uses a named
+variable. A session's shell can be zsh, where arrays start at 1, so no snippet
+uses one. `hooks/tests/skills.sh` fails on either.
 
 ## Hooks
 
@@ -78,8 +85,9 @@ instead — see `infrastructure/`.
   type, then lowercase letters, digits, `.` and `-`.
 
 They require `jq` and `perl` on the PATH. `hooks/tests/run.sh` runs every case
-in `hooks/tests/cases.jsonl` through its hook; the `hooks` workflow runs it on
-every PR that touches them.
+in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s and the
+skills' checks; the `hooks` workflow runs it on every PR that touches the
+hooks or the skills.
 
 **Installing.** Declaring the plugin in a project's `.claude/settings.json`
 enables it but does not install it. Once per machine, from the workspace:

@@ -12,7 +12,7 @@
       "displayName": "0xc0",
       "source": "./plugins/0xc0",
       "description": "Agents, hooks and guardrails for 0xc0-labs: zoned network, IaC and GitOps",
-      "version": "0.2.0",
+      "version": "0.3.1",
       "author": {
         "name": "sergioaten"
       }

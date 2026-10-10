@@ -10,6 +10,10 @@ orchestrator applies it. The orchestrator plans, writes the contracts, gates
 and wakes, and owns integration. It edits the workspace repo and the board,
 **no other repo's files**: each repo's session does that, in its own tab.
 
+The session's shell can be zsh, where arrays start at 1: the snippets here
+use none, and neither does one written on the spot. For several issues, one
+`gh` call each, written out.
+
 ## 1. Plan
 
 Plan mode first. For every repo: what changes and why, what it needs from
@@ -64,16 +68,13 @@ gh issue create -R 0xc0-labs/<repo> --title "<this repo's part, as an outcome>" 
 gh issue edit <n> -R 0xc0-labs/<downstream> --add-blocked-by https://github.com/0xc0-labs/<upstream>/issues/<m>
 ```
 
-Every issue goes on the board as Todo, with a `Priority`. IDs by name:
+Every issue goes on the board as Todo, with a `Priority`. Fields by name and
+the item by its issue's URL, one field per call, no IDs to look up:
 
 ```sh
-f=$(gh project field-list 1 --owner 0xc0-labs --format json)
-project=$(gh project view 1 --owner 0xc0-labs --format json --jq .id)
-field() { jq -r --arg n "$1" '.fields[] | select(.name==$n) | .id' <<<"$f"; }
-opt() { jq -r --arg n "$1" --arg o "$2" '.fields[] | select(.name==$n) | .options[] | select(.name==$o) | .id' <<<"$f"; }
-item=$(gh project item-add 1 --owner 0xc0-labs --url <issue-url> --format json --jq .id)
-gh project item-edit --project-id "$project" --id "$item" --field-id "$(field Status)" --single-select-option-id "$(opt Status Todo)"
-gh project item-edit --project-id "$project" --id "$item" --field-id "$(field Priority)" --single-select-option-id "$(opt Priority P2)"
+gh project item-add 1 --owner 0xc0-labs --url <issue-url>
+gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Todo
+gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Priority --value P2
 ```
 
 Relate, besides parent and "blocked by", what belongs together outside this
@@ -102,17 +103,29 @@ gh issue view <n> -R 0xc0-labs/<repo> --json blockedBy --jq '.blockedBy[] | "\(.
 gh run list -R 0xc0-labs/<upstream> -b main -L 3 --json workflowName,conclusion,createdAt
 ```
 
-Then Status → Ready (`opt Status Ready`).
+Then Status → Ready:
+
+```sh
+gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Ready
+```
 
 ## 4. Wake the repo's session
 
-`ListAgents`: a session named `<repo>` is open → `SendMessage` to it:
-"`<repo>#<n>` is Ready." Nothing more: the issue is the contract, and a
-message that adds to it means the issue is incomplete. Not open → ask the
-operator to open it; never start a session yourself:
+A session is named after its repo as Herdr names an agent: dots to dashes, a
+leading dot dropped (`github`, `offby1-cc`, `artistlabco-com`); the
+workspace's is `orchestrator`. Herdr allows only `[a-z][a-z0-9_-]`.
 
 ```sh
-cd ~/git/github/0xc0-homelab/workspace/<repo> && claude -n <repo> "/0xc0:work-issue"
+name=$(printf '%s' "<repo>" | sed -E 's/^\.//; s/\./-/g')
+```
+
+`ListAgents`: a session named `<name>` is open → `SendMessage` to it:
+"`<repo>#<n>` is Ready." Nothing more: the issue is the contract, and a
+message that adds to it means the issue is incomplete. Not open → ask the
+operator to open it, from Herdr or with this; never start a session yourself:
+
+```sh
+cd ~/git/github/0xc0-homelab/workspace/<repo> && claude -n <name> "/0xc0:work-issue"
 ```
 
 ## 5. Follow the reports
