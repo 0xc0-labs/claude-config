@@ -17,4 +17,6 @@ while IFS= read -r case; do
   fi
 done < "$here/cases.jsonl"
 echo "$((n - failed))/$n cases pass"
+# board.sh prints instead of blocking: its own cases, from a fixture.
+bash "$here/board.sh" || failed=$((failed + 1))
 [ "$failed" -eq 0 ]
