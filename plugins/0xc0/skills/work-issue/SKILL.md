@@ -102,10 +102,14 @@ Moving it to Blocked later is the same call, `--value Blocked`.
 ## 3. Read the contract
 
 ```sh
-gh issue view "$n" --comments --json title,body,comments,issueType,parent,blockedBy
+gh issue view "$n" --json title,body,comments,issueType,parent,blockedBy --jq '
+  "# \(.title)\ntype: \(.issueType.name // "-"), parent: \(.parent.url // "-")\nblocked by: \([.blockedBy.nodes[] | "\(.url) \(.state)"] | join(", ") | if . == "" then "-" else . end)\n\n\(.body)",
+  (.comments[] | "\n--- \(.author.login), \(.createdAt)\n\(.body)")'
 ```
 
-The comments count: later clarifications live there. The issue must give:
+`gh` takes `--comments` or `--json`, not both: the comments come in the
+JSON. The comments count: later clarifications live there. The issue must
+give:
 
 - the outcome and the acceptance criteria;
 - the branch, for a change across repos (the same in every repo); for one
