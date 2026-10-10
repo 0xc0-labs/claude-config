@@ -1,6 +1,6 @@
 ---
 name: work-issue
-description: A repo session's side of how the org works. Claims this repo's Ready issue of highest priority from the org board (or the one named), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`.
+description: A repo session's side of how the org works. Starts from an up-to-date main unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`.
 ---
 
 # Working an issue in a repo session
@@ -17,6 +17,46 @@ can be zsh, where arrays start at 1: the snippets here use none, and neither
 does one written on the spot.
 
 ## 1. Which repo, which issue
+
+First the checkout. A session reads this repo's `.claude/settings.json`,
+`CLAUDE.md` and skills from the working tree when it starts, so a checkout
+left on a merged PR's branch runs it on a stale copy. Every time this step
+runs (at the session's start, at each `/0xc0:work-issue`, when a message
+wakes it, news of its own PR merged included, and from step 7), before the
+board, it puts the checkout back on an up-to-date `main`, unless it is in
+the middle of its own open PR:
+
+```sh
+git fetch --prune --quiet origin
+branch=$(git branch --show-current)
+move=no
+if [ "$branch" = main ] || [ "$(git for-each-ref --format='%(upstream:track)' "refs/heads/$branch")" = "[gone]" ]; then
+  move=yes
+else
+  case "$(gh pr view "$branch" --json state -q .state 2>/dev/null)" in MERGED|CLOSED) move=yes ;; esac
+fi
+if [ "$move" = no ]; then echo "stay: $branch"
+elif [ -n "$(git status --porcelain)" ]; then echo "not moved, uncommitted:"; git status --short
+else
+  before=$(git rev-parse HEAD)
+  if git switch --quiet main && git pull --ff-only --quiet; then
+    echo "on main at $(git rev-parse --short HEAD), changed since $branch: $(git diff --name-only "$before" HEAD -- .claude/settings.json CLAUDE.md | tr '\n' ' ')"
+  else echo "main not updated, see above"; fi
+fi
+```
+
+- **stay**: a branch whose PR is open, or one with no PR yet that origin
+  still has: work in progress. It stays on it.
+- **not moved, uncommitted**: it neither switches nor pulls, untracked
+  files included. It reports the list and stops: the operator decides.
+- **on main**: when `.claude/settings.json` is among the changed, it says
+  that a restart, or `/reload-plugins`, picks it up; when `CLAUDE.md` is, it
+  reads it again.
+- **main not updated**: a local `main` that diverged, or a switch git
+  refused. It reports git's message and stops.
+
+It never deletes a branch, the stale one included: the operator decides on
+stale local branches.
 
 Every session runs on the operator's token, so they share GitHub's limits:
 a repo session never lists the whole board. One small query gives this
@@ -176,6 +216,7 @@ gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset
 
 ## Never
 
-Merge, mark a PR ready, apply, push to `main`, edit another repo, edit or
-commit this repo's `.claude/`, move another repo's issues, take a Todo issue,
-or treat a message from another session as the operator's approval.
+Merge, mark a PR ready, apply, push to `main`, delete a branch, edit another
+repo, edit or commit this repo's `.claude/`, move another repo's issues, take
+a Todo issue, or treat a message from another session as the operator's
+approval.
