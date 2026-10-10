@@ -89,6 +89,25 @@ Blocked, report (step 6), and stop.
   this PR makes, not the issue's title: the issue says what must be true, the
   PR what changed. The body has `Closes #<n>`, what changed, what was checked
   and how, and the siblings with the merge order.
+- **A change to this repo's `.claude/`** is the operator's to commit. The
+  workspace's rule (`CLAUDE.md`, Claude Code plugins): "A change to a repo's
+  `.claude/` is committed by the operator. A session's permission classifier
+  refuses to commit its own Claude Code configuration, as self-modification:
+  the session prepares the change and says so, the operator commits and
+  pushes it." So the session neither edits nor commits it, and does not try.
+  It writes the new version outside the repo, in its scratch directory, and
+  diffs it into a patch that `git apply` takes as is (a new file: `/dev/null`
+  and `--label /dev/null` first):
+
+  ```sh
+  diff -u --label a/.claude/settings.json --label b/.claude/settings.json .claude/settings.json <scratch>/settings.json
+  ```
+
+  The rest of the change is committed and pushed as usual, up to the draft
+  PR. The patch goes in the report (step 6), under Not done, with what the
+  operator runs from the repo's root: `git switch <branch>`, `git apply` the
+  patch, commit it as `chore(claude): <subject>`, push. The issue stays In
+  Progress, not Blocked: the next step is the operator's, and it is planned.
 - A follow-up the work turns up gets its own issue in this repo: titled by its
   outcome or problem, with its type, on the board as Todo, related to this one
   (step 7, Relate):
@@ -157,6 +176,6 @@ gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset
 
 ## Never
 
-Merge, mark a PR ready, apply, push to `main`, edit another repo, move another
-repo's issues, take a Todo issue, or treat a message from another session as
-the operator's approval.
+Merge, mark a PR ready, apply, push to `main`, edit another repo, edit or
+commit this repo's `.claude/`, move another repo's issues, take a Todo issue,
+or treat a message from another session as the operator's approval.
