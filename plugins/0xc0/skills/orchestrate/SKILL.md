@@ -53,6 +53,24 @@ everything, quoted, not linked**:
 <Vault writes, applies, approvals the change needs, or none>
 ```
 
+A change that touches a repo's `.claude/` is the operator's to commit, and
+its contract says so from the start. The workspace's rule (`CLAUDE.md`,
+Claude Code plugins), quoted in the contract, since the repo's session cannot
+read it: "A change to a repo's `.claude/` is committed by the operator. A
+session's permission classifier refuses to commit its own Claude Code
+configuration, as self-modification: the session prepares the change and
+says so, the operator commits and pushes it." Its Operator steps:
+
+```markdown
+## Operator steps
+The `.claude/` change: the session prepares it, shows the exact diff in its
+report, and stops there. The operator applies it on `<branch>`, commits and
+pushes it.
+```
+
+The workspace's own `.claude/` is no different: the orchestrator prepares the
+diff and stops.
+
 The title says what must be true, or the problem, in a plain sentence:
 "Runners register without the App key on disk". No type prefix and no repo:
 the issue type (Feature, Bug or Task) and the board's Repository field carry
@@ -155,8 +173,9 @@ cd ~/git/github/0xc0-homelab/workspace/<repo> && claude -n <name> "/0xc0:work-is
 A repo session reports: PR, checks, not done, questions. A question for the
 operator goes to the operator, verbatim. A question about the contract is
 answered **in the issue**, as a comment, then the session is told to look
-again. When a PR is merged and applied, gate the next sub-issue (step 3) and
-wake its session.
+again. A report carrying a `.claude/` diff goes to the operator as it is,
+with its branch; the issue stays In Progress meanwhile. When a PR is merged
+and applied, gate the next sub-issue (step 3) and wake its session.
 
 ## 6. Integration, before calling it done
 
@@ -165,6 +184,13 @@ checked:
 
 - every PR of the set: checks green, `Closes`/`Refs` right, the merge order
   in its body;
+- every PR whose change touches a `.claude/`, the workspace's own included:
+  the operator's commit of it is on the branch before saying it can merge,
+  never after;
+
+  ```sh
+  gh pr view <n> -R 0xc0-labs/<repo> --json files --jq '.files[].path | select(startswith(".claude/"))'
+  ```
 - what one repo does to another: the callers of a reusable workflow that
   changed, the plan of a root that reads a policy that changed (it reads with
   the plan role, which must still reach it), a setting a repo inherits from
