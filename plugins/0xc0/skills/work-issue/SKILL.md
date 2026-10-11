@@ -160,6 +160,20 @@ Blocked, report (step 6), and stop.
   gh project item-add 1 --owner 0xc0-labs --url <issue-url>
   gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Todo
   ```
+- **In a repo that carries gentle-ai**, gentle-ai leads the work: its
+  `.claude/CLAUDE.md` is gentle-ai's, and the repo's root `CLAUDE.md` says
+  so. Inside the issue, gentle-ai's own workflow plans, writes and reviews
+  the change, its receipt-driven review (RDD) included: the session follows
+  it as gentle-ai writes it, and this skill does not restate it. This skill
+  is the frame around that work, and keeps holding there: this repo only;
+  the issue as the contract; the org's commit, branch and draft-PR rules;
+  the `.claude/` rule; a follow-up as its own issue; and the Never list.
+  Where gentle-ai's instructions and these differ, these win.
+
+  When gentle-ai's review asks the operator's consent, the session asks in
+  its own tab and waits for the answer there: the consent is the operator's,
+  never a message from another session. It reports (step 6) once the PR is
+  open, not while the review waits.
 
 ## 5. Check
 

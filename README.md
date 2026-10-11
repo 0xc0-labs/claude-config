@@ -33,7 +33,7 @@ described in **Installing** under Hooks.
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
 | `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, wakes each repo's session, checks the whole set |
-| `work-issue`   | a repo's session: back on an up-to-date `main` unless its own PR is open, claims this repo's Ready issue of highest priority, works it up to a draft PR, reports back in a fixed shape, takes the next |
+| `work-issue`   | a repo's session: back on an up-to-date `main` unless its own PR is open, claims this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), reports back in a fixed shape, takes the next |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
