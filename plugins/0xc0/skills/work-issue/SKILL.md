@@ -20,7 +20,13 @@ beside the repo, at `<workspace>/.worktrees/<name>`, detached at the fetched
 
 The session is named after its repo, as the workspace's `CLAUDE.md` says
 (Sessions). Its shell can be zsh, where arrays start at 1: the snippets here
-use none, and neither does one written on the spot.
+use none, and neither does one written on the spot. In a worktree, Claude
+Code refuses a command that runs git inside `$(…)`, unable to tell that it
+stays in the worktree (claude-config#54): the snippets here are plain
+calls, the session
+decides from what they print, and it carries a value from one call to the
+next as written, `<branch>` or `<before>`, since no shell variable outlives
+its call.
 
 ## 1. Which repo, which issue
 
@@ -34,40 +40,62 @@ the middle of its own open PR. In a linked worktree, `main` is checked out
 in the primary clone and `git switch main` fails there: it detaches at the
 fetched `origin/main` instead.
 
+Where it is:
+
 ```sh
 git fetch --prune --quiet origin
-branch=$(git branch --show-current)
-worktree=no
-[ "$(git rev-parse --path-format=absolute --git-dir)" = "$(git rev-parse --path-format=absolute --git-common-dir)" ] || worktree=yes
-move=no
-if [ "$branch" = main ] || { [ "$worktree" = yes ] && [ -z "$branch" ]; } || [ "$(git for-each-ref --format='%(upstream:track)' "refs/heads/$branch")" = "[gone]" ]; then
-  move=yes
-else
-  case "$(gh pr view "$branch" --json state -q .state 2>/dev/null)" in MERGED|CLOSED) move=yes ;; esac
-fi
-if [ "$move" = no ]; then echo "stay: $branch"
-elif [ -n "$(git status --porcelain)" ]; then echo "not moved, uncommitted:"; git status --short
-elif [ "$worktree" = yes ]; then
-  before=$(git rev-parse HEAD)
-  if git switch --quiet --detach origin/main; then
-    echo "worktree at origin/main $(git rev-parse --short HEAD), changed: $(git diff --name-only "$before" HEAD -- .claude/settings.json CLAUDE.md | tr '\n' ' ')"
-  else echo "worktree not moved, see above"; fi
-else
-  before=$(git rev-parse HEAD)
-  if git switch --quiet main && git pull --ff-only --quiet; then
-    echo "on main at $(git rev-parse --short HEAD), changed since $branch: $(git diff --name-only "$before" HEAD -- .claude/settings.json CLAUDE.md | tr '\n' ' ')"
-  else echo "main not updated, see above"; fi
-fi
+git status --short --branch
+git rev-parse --path-format=absolute --git-dir --git-common-dir HEAD
 ```
 
-- **stay**: a branch whose PR is open, or one with no PR yet that origin
-  still has: work in progress. It stays on it.
-- **not moved, uncommitted**: it neither switches nor pulls, untracked
-  files included. It reports the list and stops: the operator decides.
-- **on main**, or **worktree at origin/main**: when `.claude/settings.json`
-  is among the changed, it says that a restart, or `/reload-plugins`, picks
-  it up; when `CLAUDE.md` is, it reads it again. In a worktree, step 4
-  creates the branch from there.
+`git status` starts with `## <branch>...origin/<branch>`, or `## HEAD (no
+branch)` when detached, and ends that line in `[gone]` once origin no
+longer has the branch; every line after it is an uncommitted change,
+untracked files included. `rev-parse` prints two directories, the same in a
+primary clone and different in a linked worktree, then the commit it is on:
+`<before>`.
+
+It moves on `main`, on a `[gone]` branch, or detached in a worktree. On any
+other branch, its PR decides: `MERGED` or `CLOSED`, it moves; `OPEN`, or no
+pull request found, it stays.
+
+```sh
+gh pr view <branch> --json state --jq .state
+```
+
+Detached in a primary clone, it stays. It moves only a clean checkout. In a
+worktree:
+
+```sh
+git switch --quiet --detach origin/main
+```
+
+In a primary clone, one call each, the pull only once the switch succeeded:
+
+```sh
+git switch --quiet main
+git pull --ff-only --quiet
+```
+
+Then where it landed, and what changed since `<before>`:
+
+```sh
+git rev-parse --short HEAD
+git diff --name-only <before> HEAD -- .claude/settings.json CLAUDE.md
+```
+
+It says one of:
+
+- **stay**, `stay: <branch>`: a branch whose PR is open, or one with no PR
+  yet that origin still has: work in progress. It stays on it.
+- **not moved, uncommitted**, and `git status`'s lines: it neither switches
+  nor pulls, untracked files included. It reports the list and stops: the
+  operator decides.
+- **on main**, `on main at <short>, changed since <branch>: <files>`, or
+  **worktree at origin/main**, `worktree at origin/main <short>, changed:
+  <files>`: when `.claude/settings.json` is among the changed, it says that
+  a restart, or `/reload-plugins`, picks it up; when `CLAUDE.md` is, it
+  reads it again. In a worktree, step 4 creates the branch from there.
 - **main not updated**, or **worktree not moved**: a local `main` that
   diverged, or a switch git refused. It reports git's message and stops.
 
@@ -77,28 +105,28 @@ stale local branches.
 Every session runs on the operator's token, so they share GitHub's limits:
 a repo session never lists the whole board. One small query gives this
 repo's open issues with their board Status and Priority, Ready first, P1
-first, then P2, P3 and none, then the lowest number:
+first, then P2, P3 and none, then the lowest number. `gh` fills `{repo}`
+from this checkout's remote, and the first line names it:
 
 ```sh
-repo=$(git remote get-url origin | sed -E 's#.*0xc0-labs/##; s#\.git$##')
-gh api graphql -f repo="$repo" -f query='query($repo: String!) {
-  repository(owner: "0xc0-labs", name: $repo) { issues(states: OPEN, first: 50) { nodes {
+gh api graphql -F repo='{repo}' -f query='query($repo: String!) {
+  repository(owner: "0xc0-labs", name: $repo) { name issues(states: OPEN, first: 50) { nodes {
     number title url
     projectItems(first: 5) { nodes { project { number }
       status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
       priority: fieldValueByName(name: "Priority") { ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } } }' \
-  --jq '[.data.repository.issues.nodes[] | {number, title, url} + (.projectItems.nodes[] | select(.project.number == 1)
+  --jq '.data.repository | "repo: \(.name)", ([.issues.nodes[] | {number, title, url} + (.projectItems.nodes[] | select(.project.number == 1)
     | {status: (.status.name // "-"), priority: (.priority.name // "--")})]
     | sort_by((if .status == "Ready" then 0 else 1 end), ({"P1":1,"P2":2,"P3":3}[.priority] // 9), .number)
-    | .[] | "\(.number)\t\(.status)\t\(.priority)\t\(.url)\t\(.title)"'
+    | .[] | "\(.number)\t\(.status)\t\(.priority)\t\(.url)\t\(.title)")'
 ```
 
 - **An issue named**, as `46` or `<repo>#46` (`/0xc0:work-issue payload#46`):
   `<repo>` is the GitHub name, as issues are referenced (`.github#61`,
   `offby1.cc#27`), with or without `0xc0-labs/` before it. That one, only if
-  `<repo>` is this repo (`$repo` above) and the issue is Ready, or already In
-  Progress from this session's earlier work. Otherwise it says why and
-  stops (step 7).
+  `<repo>` is this repo (the `repo:` line above) and the issue is Ready, or
+  already In Progress from this session's earlier work. Otherwise it says
+  why and stops (step 7).
 - **None named**: the first Ready one.
 
 - **Nothing Ready**: say so in one line and stop. The orchestrator messages
@@ -109,12 +137,12 @@ gh api graphql -f repo="$repo" -f query='query($repo: String!) {
 
 Read its status again right before (another session may have taken it), that
 one issue alone, then move it to In Progress. That move is the claim. Fields by name and the item
-by its issue's URL, one field per call, no IDs to look up:
+by its issue's URL, `<url>` from the query above, one field per call, no
+IDs to look up:
 
 ```sh
-issue=https://github.com/0xc0-labs/$repo/issues/$n
-gh issue view "$issue" --json projectItems --jq '.projectItems[] | select(.title=="0xc0-labs") | .status.name'
-gh project item-edit 1 --owner 0xc0-labs --url "$issue" --field Status --value "In Progress"
+gh issue view <url> --json projectItems --jq '.projectItems[] | select(.title=="0xc0-labs") | .status.name'
+gh project item-edit 1 --owner 0xc0-labs --url <url> --field Status --value "In Progress"
 ```
 
 Moving it to Blocked later is the same call, `--value Blocked`.
@@ -122,7 +150,7 @@ Moving it to Blocked later is the same call, `--value Blocked`.
 ## 3. Read the contract
 
 ```sh
-gh issue view "$n" --json title,body,comments,issueType,parent,blockedBy --jq '
+gh issue view <n> --json title,body,comments,issueType,parent,blockedBy --jq '
   "# \(.title)\ntype: \(.issueType.name // "-"), parent: \(.parent.url // "-")\nblocked by: \([.blockedBy.nodes[] | "\(.url) \(.state)"] | join(", ") | if . == "" then "-" else . end)\n\n\(.body)",
   (.comments[] | "\n--- \(.author.login), \(.createdAt)\n\(.body)")'
 ```

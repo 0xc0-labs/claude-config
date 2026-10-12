@@ -6,14 +6,13 @@ says when; this says how.
 ## Relate two issues
 
 GitHub's "relates to", besides parent and "blocked by". `gh` has no flag for
-it yet:
+it yet: each issue's ID, one call each, then the mutation with both as
+printed. Plain calls: in a worktree, Claude Code refuses them wrapped in a
+shell function, as too complex to verify (claude-config#54).
 
 ```sh
-relate() {  # relate <owner/repo#n> <owner/repo#n>
-  a=$(gh issue view "${1#*#}" -R "${1%#*}" --json id -q .id)
-  b=$(gh issue view "${2#*#}" -R "${2%#*}" --json id -q .id)
-  gh api graphql -f query='mutation($a:ID!,$b:ID!){ addRelatesTo(input:{issueId:$a, relatedIssueId:$b}) { clientMutationId } }' -f a="$a" -f b="$b" >/dev/null
-}
+gh issue view <n> -R 0xc0-labs/<repo> --json id -q .id
+gh api graphql -f query='mutation($a:ID!,$b:ID!){ addRelatesTo(input:{issueId:$a, relatedIssueId:$b}) { clientMutationId } }' -f a=<id> -f b=<id>
 ```
 
 ## When GitHub rate-limits
