@@ -5,7 +5,7 @@ description: The workspace session's side of how the org works. Plans a change a
 
 # Orchestrating a change
 
-The workspace's `docs/design.md`, How we work, decides; this is how the
+The workspace's `docs/design/how-we-work.md` decides; this is how the
 orchestrator applies it. The orchestrator plans, writes the contracts, gates
 and wakes, and owns integration. It edits the workspace repo and the board,
 **no other repo's files**: each repo's session does that, in its own tab.
@@ -53,13 +53,9 @@ everything, quoted, not linked**:
 <Vault writes, applies, approvals the change needs, or none>
 ```
 
-A change that touches a repo's `.claude/` is the operator's to commit, and
-its contract says so from the start. The workspace's rule (`CLAUDE.md`,
-Claude Code plugins), quoted in the contract, since the repo's session cannot
-read it: "A change to a repo's `.claude/` is committed by the operator. A
-session's permission classifier refuses to commit its own Claude Code
-configuration, as self-modification: the session prepares the change and
-says so, the operator commits and pushes it." Its Operator steps:
+A change that touches a repo's `.claude/` is the operator's to commit (the
+workspace's `CLAUDE.md`, Claude Code plugins), and its contract says so from
+the start. Its Operator steps:
 
 ```markdown
 ## Operator steps
@@ -119,15 +115,8 @@ One field of one issue, as in step 3, is one call by name:
 
 Relate, besides parent and "blocked by", what belongs together outside this
 change: the design issue behind it, an earlier change it builds on or fixes,
-another issue touching the same thing. `gh` has no flag for it yet:
-
-```sh
-relate() {  # relate <owner/repo#n> <owner/repo#n>
-  a=$(gh issue view "${1#*#}" -R "${1%#*}" --json id -q .id)
-  b=$(gh issue view "${2#*#}" -R "${2%#*}" --json id -q .id)
-  gh api graphql -f query='mutation($a:ID!,$b:ID!){ addRelatesTo(input:{issueId:$a, relatedIssueId:$b}) { clientMutationId } }' -f a="$a" -f b="$b" >/dev/null
-}
-```
+another issue touching the same thing. How:
+[`references/github.md`, Relate two issues](../../references/github.md#relate-two-issues).
 
 ## 3. Gate to Ready
 
@@ -151,9 +140,8 @@ gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --valu
 
 ## 4. Wake the repo's session
 
-A session is named after its repo as Herdr names an agent: dots to dashes, a
-leading dot dropped (`github`, `offby1-cc`, `artistlabco-com`); the
-workspace's is `orchestrator`. Herdr allows only `[a-z][a-z0-9_-]`.
+A session is named after its repo, as the workspace's `CLAUDE.md` says
+(Sessions); Herdr allows only `[a-z][a-z0-9_-]`:
 
 ```sh
 name=$(printf '%s' "<repo>" | sed -E 's/^\.//; s/\./-/g')
@@ -203,16 +191,9 @@ lists the sub-issues and their PRs.
 
 ## When GitHub rate-limits
 
-The sessions share the operator's token, and the limit that bites is the
-secondary one on bursts, where every request during the penalty extends it.
-On "rate limit" or "submitted too quickly" from any `gh` call: stop calling
-GitHub, say so, and wait in the background, until the reset when the hourly
-quota is spent, a few minutes otherwise. Then try once more. Never an
-immediate retry, never a loop. The quota, without spending it:
-
-```sh
-gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset | todate)"'
-```
+On "rate limit" or "submitted too quickly" from any `gh` call, before
+anything else:
+[`references/github.md`, When GitHub rate-limits](../../references/github.md#when-github-rate-limits).
 
 ## Never
 
