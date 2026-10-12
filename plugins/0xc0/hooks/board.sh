@@ -2,6 +2,11 @@
 # SessionStart. What it loads, and why it shares one cache: the README, Hooks.
 set -uo pipefail
 
+if [ "${OXC0_AUTOPILOT:-}" = 1 ]; then
+  echo "0xc0: started by the autopilot: the issue is the contract, no board read."
+  exit 0
+fi
+
 cache_ttl_seconds=120
 rate_limit_pause_seconds=300
 lock_wait_seconds=30

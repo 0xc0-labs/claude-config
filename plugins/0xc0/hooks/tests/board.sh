@@ -16,12 +16,15 @@ sleep "${GH_DELAY:-0}"
 cat "$BOARD_FIXTURE"
 EOF
 chmod +x "$tmp/bin/gh"
+# Run from an autopilot session, the tests would inherit it.
+unset OXC0_AUTOPILOT
 
 session() {  # session <name> <origin url> <cache>
   git init -q "$tmp/$1" && git -C "$tmp/$1" remote add origin "$2"
   mkdir -p "$tmp/$3"
   PATH="$tmp/bin:$PATH" XDG_CACHE_HOME="$tmp/$3" CLAUDE_PROJECT_DIR="$tmp/$1" BOARD_FIXTURE="$fixture" \
-    GH_ERROR="${GH_ERROR:-}" GH_DELAY="${GH_DELAY:-0}" bash "$here/../board.sh" > "$tmp/$1.out"
+    GH_ERROR="${GH_ERROR:-}" GH_DELAY="${GH_DELAY:-0}" OXC0_AUTOPILOT="${OXC0_AUTOPILOT:-}" \
+    bash "$here/../board.sh" > "$tmp/$1.out"
 }
 seed() {  # seed <cache> <minutes old>
   mkdir -p "$tmp/$1/0xc0"
@@ -122,6 +125,15 @@ aged "$tmp/dead/0xc0/board.lock" 2
 session dead "$vault" dead
 has dead "the board" "$twelve"
 reads dead "one read" 1
+
+OXC0_AUTOPILOT=1 session autopilot "$vault" autopilot
+has autopilot "the one line" "0xc0: started by the autopilot: the issue is the contract, no board read."
+lacks autopilot "no board" "Ready, by priority:"
+reads autopilot "no read" 0
+session by-hand "$vault" autopilot
+has by-hand "without it, the board" "$twelve"
+lacks by-hand "not the line" "started by the autopilot"
+reads autopilot "without it, one read" 1
 
 rm -rf "$tmp"
 echo "$((n - failed))/$n board cases pass"
