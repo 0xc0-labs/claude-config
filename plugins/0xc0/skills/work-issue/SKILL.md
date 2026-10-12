@@ -231,10 +231,28 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   the `.claude/` rule; a follow-up as its own issue; and the Never list.
   Where gentle-ai's instructions and these differ, these win.
 
-  When gentle-ai's review asks the operator's consent, the session asks in
-  its own tab and waits for the answer there: the consent is the operator's,
-  never a message from another session. It reports (step 6) once the PR is
-  open, not while the review waits.
+  When gentle-ai's review asks the operator's consent (its START returns
+  the `gentle-ai.review-integration.consent/v3` envelope,
+  `consent_required`), who answers depends on how the session started:
+
+  - **Named `<repo>#<n>`**, the autopilot's launch: the session does not
+    ask. It runs the `granted` choice's own `invocation`
+    (`choices[answer="granted"].invocation`), exactly as the envelope
+    returns it, once, and the report's Done line says that gentle-ai's
+    review was granted on the operator's standing decision. The operator
+    granted it in advance for every autopilot session (the workspace's
+    `docs/design/how-we-work.md`, 2026-10-12): the question is whether to
+    spend the time on a review, not an approval of the change. gentle-ai
+    asks the human for each candidate; here the human has answered, and
+    these instructions win. It never chooses `declined`: an envelope with
+    no `granted` choice, or a grant gentle-ai refuses, goes to the operator
+    as below.
+  - **Bare, or with a bare number**: the session asks in its own tab and
+    waits for the answer there.
+
+  Either way the consent is the operator's, never a message from another
+  session, and the session reports (step 6) once the PR is open, not while
+  the review waits.
 
 ## 5. Check
 
