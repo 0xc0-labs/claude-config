@@ -1,7 +1,7 @@
 {
   "name": "0xc0",
   "description": "Hooks, skills and guardrails for 0xc0-labs",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "author": {
     "name": "sergioaten"
   }

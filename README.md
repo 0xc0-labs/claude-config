@@ -104,6 +104,11 @@ goes in a file.
   for 120 seconds, with a lock so sessions starting together read it once. A
   failed read leaves the last board with a note; a rate limit pauses reads
   for five minutes, since every request during GitHub's penalty extends it.
+  A session the workspace's autopilot starts carries `OXC0_AUTOPILOT=1`
+  (workspace#130) and gets no board: `work-issue` reads its issue and that
+  issue's status itself, and with one session per issue, a whole read for
+  each spent GitHub's hourly quota (claude-config#71). `board.sh` reads
+  nothing then and prints one line saying so.
   `tests/board.sh` checks it against a stand-in `gh`.
 - `no-apply.sh` — blocks `tofu/terraform apply|destroy`, and `ansible-playbook`
   or `scripts/ansible` without `--check`.
