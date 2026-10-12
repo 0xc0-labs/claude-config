@@ -26,7 +26,9 @@ stays in the worktree (claude-config#54): the snippets here are plain
 calls, the session
 decides from what they print, and it carries a value from one call to the
 next as written, `<branch>` or `<before>`, since no shell variable outlives
-its call.
+its call. It refuses as well a `gh` command whose title or body names git,
+so what the session writes to GitHub goes in a file (Text for GitHub,
+below).
 
 ## 1. Which repo, which issue
 
@@ -167,8 +169,8 @@ give:
 
 This session cannot read the workspace's design without asking: what the work
 needs is quoted in the issue, or it is missing. **Missing, contradictory or
-still blocked: do not guess.** Comment the question on the issue, move it to
-Blocked, report (step 6), and stop (step 7).
+still blocked: do not guess.** Comment the question on the issue (Text for
+GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
 
 ## 4. Work it
 
@@ -194,7 +196,8 @@ Blocked, report (step 6), and stop (step 7).
 - Up to a **draft** PR. Its title is a Conventional Commit for the change
   this PR makes, not the issue's title: the issue says what must be true, the
   PR what changed. The body has `Closes #<n>`, what changed, what was checked
-  and how, and the siblings with the merge order.
+  and how, and the siblings with the merge order. Once the branch is pushed,
+  it is opened from a file (Text for GitHub, below).
 - **A change to this repo's `.claude/`** is the operator's to commit (the
   workspace's `CLAUDE.md`, Claude Code plugins), so the session neither edits
   nor commits it, and does not try. It writes the new version outside the
@@ -211,8 +214,8 @@ Blocked, report (step 6), and stop (step 7).
   patch, commit it as `chore(claude): <subject>`, push. The issue stays In
   Progress, not Blocked: the next step is the operator's, and it is planned.
 - A follow-up the work turns up gets its own issue in this repo: titled by its
-  outcome or problem, with its type, on the board as Todo, related to this one
-  (Relate, below):
+  outcome or problem, with its type, filed from a file (Text for GitHub,
+  below), on the board as Todo, related to this one (Relate, below):
 
   ```sh
   gh project item-add 1 --owner 0xc0-labs --url <issue-url>
@@ -283,6 +286,51 @@ line: the autopilot reads it to close the tab.
 
 A session waiting on the operator, for gentle-ai's consent or anything else,
 has not ended: it prints no last line until it does.
+
+### Text for GitHub
+
+In a worktree, Claude Code refuses a `gh` command whose title or body names
+git, on the command line or in a heredoc, unable to tell that gh runs none
+(claude-config#56). So a title, a body or a comment never goes on the command
+line, wherever the session runs: it writes the text into its scratch
+directory with its file tool, not with a heredoc, `echo` or `printf`, which
+put it back there, and the command names only the file.
+
+A comment on an issue (a question, step 3) or on a PR, and a PR's new body:
+
+```sh
+gh issue comment <n> --body-file <scratch>/comment.md
+gh pr comment <pr> --body-file <scratch>/comment.md
+gh pr edit <pr> --body-file <scratch>/pr.md
+```
+
+`gh pr create` and `gh issue create` take a title only on the command line,
+so a draft PR and a new issue go through the REST API, each from one JSON
+file whose body is one string, `\n` at each line break. `gh` fills
+`{owner}/{repo}` from this checkout's remote and prints the new URL. The
+draft PR, its branch pushed:
+
+```json
+{"title": "<type>(<scope>): <subject>", "head": "<branch>", "base": "main", "draft": true,
+ "body": "Closes #<n>\n\n<what changed, what was checked and how, the siblings>"}
+```
+
+```sh
+gh api repos/{owner}/{repo}/pulls --input <scratch>/pr.json --jq .html_url
+```
+
+An issue, its type by name:
+
+```json
+{"title": "<the outcome or the problem>", "type": "<Feature|Bug|Task>", "body": "<the body>"}
+```
+
+```sh
+gh api repos/{owner}/{repo}/issues --input <scratch>/issue.json --jq .html_url
+```
+
+A PR's new title: `{"title": "…"}` sent the same way, with `-X PATCH` to
+`repos/{owner}/{repo}/pulls/<pr>`.
 
 ### Relate
 

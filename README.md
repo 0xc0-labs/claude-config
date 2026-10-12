@@ -66,7 +66,10 @@ skill's arguments, so a snippet braces them, `"${1}"`, or uses a named
 variable. A session's shell can be zsh, where arrays start at 1, so no snippet
 uses one. In a worktree, Claude Code refuses a command that runs git inside
 `$(…)`, so no snippet does: plain calls, and the session decides from what
-they print. `hooks/tests/skills.sh` fails on any of the three.
+they print. `hooks/tests/skills.sh` fails on any of the three. Nor does
+`work-issue` pass `gh` a title, a body or a comment on the command line:
+there too, a text that names git is refused (claude-config#56), so it goes
+in a file.
 
 ## Hooks
 
