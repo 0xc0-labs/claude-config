@@ -13,6 +13,7 @@ if printf '%s' "$cmd" | grep -Eq '[[:space:]](-F|--file)[=[:space:]]+-([[:space:
   msg="$(printf '%s' "$cmd" | perl -0777 -ne '
     print $2 if /\bgit\b[^\n;&|]*\bcommit\b[^\n]*?<<-?\s*["\x27]?(\w+)["\x27]?[^\n]*\n(.*?)\n\s*\1\s*(?:\n|$)/s')"
 elif printf '%s' "$cmd" | grep -Eq '[[:space:]]-([a-zA-Z]*m|-message)[=[:space:]]'; then
+  # Every -m or --message value, any quoting, grouped short flags included (-qam).
   msg="$(printf '%s' "$cmd" | perl -ne '
     while (/(?:\s-[a-zA-Z]*m|\s--message)[= ]\s*("([^"\\]*(\\.[^"\\]*)*)"|'"'"'([^'"'"']*)'"'"'|(\S+))/g) {
       print defined($2) ? $2 : defined($4) ? $4 : $5; print "\n";
