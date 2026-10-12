@@ -260,9 +260,11 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
 ## 5. Check, then ready
 
 Watch the PR's checks in the background, at most once a minute, never every
-few seconds: `gh pr checks <pr> --watch --interval 60`. A failure within the
-issue's scope gets fixed, and the checks are watched again; one outside it
-is reported.
+few seconds: `gh pr checks <pr> --watch --interval 60`. Right after a push,
+GitHub may not have registered them yet: `no checks reported` is no result,
+and the watch starts again a minute later. A failure within the issue's
+scope gets fixed, and the checks are watched again; one outside it is
+reported.
 
 A draft is work in progress; a ready PR can be merged (workspace#119).
 Once the checks have finished, and before the report, the session marks
