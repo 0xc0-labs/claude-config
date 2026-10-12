@@ -1,6 +1,6 @@
 ---
 name: work-issue
-description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
+description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
 ---
 
 # Working an issue in a repo session
@@ -11,9 +11,10 @@ issue**, up to a **draft PR**, reports to the orchestrator, and **ends**: one
 issue per session. The orchestrator, a session named `orchestrator` in the
 workspace, writes the issues and owns what crosses repos.
 
-It may run in its own worktree: Claude Code's `-w <name>`, which the plugin's
-`WorktreeCreate` hook places beside the repo, at `<workspace>/.worktrees/<name>`,
-detached at the fetched `origin/main`. Step 1 says what changes there.
+It may run in its own worktree: Claude Code's `-w <name>`, which the
+autopilot's `WorktreeCreate` hook (the plugin's `worktree-create.sh`) places
+beside the repo, at `<workspace>/.worktrees/<name>`, detached at the fetched
+`origin/main`. Step 1 says what changes there.
 
 The session is named after its repo, as the workspace's `CLAUDE.md` says
 (Sessions). Its shell can be zsh, where arrays start at 1: the snippets here
@@ -144,8 +145,20 @@ Blocked, report (step 6), and end (step 7).
   from here. So does a better idea outside the issue's scope.
 - This repo's `CLAUDE.md` and the workspace's rules: Conventional Commits, no
   tooling trailers, the branch from `origin/main` with the issue's name (the
-  same in every repo of the change), the checks this repo runs locally. The
-  branch is `git switch -c <branch> origin/main`, in a worktree too.
+  same in every repo of the change), the checks this repo runs locally. In
+  a worktree too, the branch comes from origin. Is it there already, as for
+  an issue back for changes to its draft PR (step 1's fetch brought it)?
+
+  ```sh
+  git rev-parse --verify --quiet refs/remotes/origin/<branch>
+  ```
+
+  - **On origin**: `git switch <branch>` creates it from `origin/<branch>`
+    (or takes the local one), then `git merge --ff-only origin/<branch>`.
+    The work continues there, onto the PR already open; that PR's comments
+    and reviews (`gh pr view <branch> --json comments,reviews`) count with
+    the issue's. A local branch that diverged from origin: report and end.
+  - **Not on origin**: `git switch -c <branch> origin/main`.
 - Up to a **draft** PR. Its title is a Conventional Commit for the change
   this PR makes, not the issue's title: the issue says what must be true, the
   PR what changed. The body has `Closes #<n>`, what changed, what was checked

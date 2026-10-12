@@ -50,9 +50,9 @@ them: secrets show up everywhere, and every repo works the same way (the
 workspace's `docs/design/how-we-work.md`). A repo's session, named as the
 workspace's `CLAUDE.md` says (Sessions), starts working with
 `claude -n <name> "/0xc0:work-issue"`. The workspace's autopilot starts one
-fresh session per issue, in its own worktree:
-`claude -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`, and
-closes it on its last line, `work-issue: done <repo>#<n>` or
+fresh session per issue, in its own worktree,
+`claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`,
+and closes it on its last line, `work-issue: done <repo>#<n>` or
 `work-issue: stopped …`. Skills tied to one repo live in that repo's
 `.claude/skills/` instead — see `infrastructure/`.
 
@@ -92,11 +92,20 @@ uses one. `hooks/tests/skills.sh` fails on either.
 - `branch-name.sh` — rejects creating a branch (`git switch -c`, `git checkout
   -b`, with or without `-C <dir>`) whose name is not `<type>/<slug>`: a commit
   type, then lowercase letters, digits, `.` and `-`.
+
+Two more scripts sit beside them, but the plugin does not register them:
+Claude Code creates a `claude -w` worktree before it loads plugins' hooks,
+so a plugin's `WorktreeCreate` never runs for it (claude-config#52). The
+workspace's autopilot declares both through `--settings` (workspace#105),
+from the workspace's own checkout of this repo:
+
 - `worktree-create.sh` — `WorktreeCreate`, which replaces Claude Code's own
   worktree logic: `claude -w <name>` gets a worktree beside its repo, at
-  `<workspace>/.worktrees/<name>`, never under the repo, whose `CLAUDE.md`
-  would then load twice. It fetches origin and adds the worktree detached at
-  `origin/main`; `work-issue` creates the branch. It refuses a name that is
+  `<workspace>/.worktrees/<name>`. Under the repo, Node and TypeScript would
+  resolve a module missing from the worktree in the primary clone's
+  `node_modules`, and the primary clone's tools would walk into it. It
+  fetches origin and adds the worktree detached at `origin/main`;
+  `work-issue` creates or checks out the branch. It refuses a name that is
   not `[a-z0-9][a-z0-9._-]*`, and a repo not directly under a workspace that
   carries `CLAUDE.md`, the workspace itself included.
 - `worktree-remove.sh` — `WorktreeRemove`: removes that worktree and prunes,
@@ -106,7 +115,7 @@ uses one. `hooks/tests/skills.sh` fails on either.
 
 They require `jq` and `perl` on the PATH. `hooks/tests/run.sh` runs every case
 in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s, the
-worktree hooks' (on a throwaway origin and workspace) and the skills'
+worktree scripts' (on a throwaway origin and workspace) and the skills'
 checks; the `hooks` workflow runs it on every PR that touches the hooks, the
 skills or the references.
 

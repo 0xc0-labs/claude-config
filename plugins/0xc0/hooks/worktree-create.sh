@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # WorktreeCreate: replaces Claude Code's own worktree logic. The worktree goes
 # beside the repo, in <workspace>/.worktrees/<name>, not under the repo, where
-# its session would load the primary clone's CLAUDE.md too (workspace#103).
+# Node would resolve modules from the primary clone's node_modules
+# (workspace#103). Declared by the autopilot through --settings, not by the
+# plugin: Claude Code creates a -w worktree before it loads plugins' hooks.
 # Claude Code takes the last stdout line as the path: all else goes to stderr.
 set -uo pipefail
 
