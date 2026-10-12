@@ -1,6 +1,9 @@
 # The hooks also need perl, from the OS, and board.sh needs gh.
 [tools]
 jq = "1.8.2"
+python = "3.12.14"
+uv = "0.12.17"
+"pipx:semgrep" = "1.180.0"
 
 [settings]
 locked = true
