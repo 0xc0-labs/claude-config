@@ -149,8 +149,9 @@ They require `jq` and `perl` on the PATH. A hook blocks a tool call by
 exiting 2, and Claude reads why from its stderr; 0 lets it through.
 `hooks/tests/run.sh` runs every case in `hooks/tests/cases.jsonl` through its
 hook and compares that exit code with the case's `want`, then runs
-`board.sh`'s, the worktree scripts' (on a throwaway origin and workspace)
-and the skills' checks; the `hooks` workflow runs it on every PR that
+`board.sh`'s, every `hooks.json` command from a plugin path with a space,
+the worktree scripts' (on a throwaway origin and workspace) and the
+skills' checks; the `hooks` workflow runs it on every PR that
 touches the hooks, the skills or the references.
 
 ## Versioning
