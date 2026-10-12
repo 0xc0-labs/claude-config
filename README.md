@@ -43,14 +43,18 @@ Then start a new session: plugins load at startup.
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
 | `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, wakes each repo's session, checks the whole set |
-| `work-issue`   | a repo's session: back on an up-to-date `main` unless its own PR is open, claims this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), reports back in a fixed shape, takes the next |
+| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone and ends with a fixed last line |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
 workspace's `docs/design/how-we-work.md`). A repo's session, named as the
 workspace's `CLAUDE.md` says (Sessions), starts working with
-`claude -n <name> "/0xc0:work-issue"`. Skills tied to one repo live in that
-repo's `.claude/skills/` instead — see `infrastructure/`.
+`claude -n <name> "/0xc0:work-issue"`. The workspace's autopilot starts one
+fresh session per issue, in its own worktree,
+`claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`,
+and closes it on its last line, `work-issue: done <repo>#<n>` or
+`work-issue: stopped …`. Skills tied to one repo live in that repo's
+`.claude/skills/` instead — see `infrastructure/`.
 
 What both `orchestrate` and `work-issue` do on GitHub, relating two issues
 and backing off a rate limit, lives once in
@@ -89,10 +93,31 @@ uses one. `hooks/tests/skills.sh` fails on either.
   -b`, with or without `-C <dir>`) whose name is not `<type>/<slug>`: a commit
   type, then lowercase letters, digits, `.` and `-`.
 
+Two more scripts sit beside them, but the plugin does not register them:
+Claude Code creates a `claude -w` worktree before it loads plugins' hooks,
+so a plugin's `WorktreeCreate` never runs for it (claude-config#52). The
+workspace's autopilot declares both through `--settings` (workspace#105),
+from the workspace's own checkout of this repo:
+
+- `worktree-create.sh` — `WorktreeCreate`, which replaces Claude Code's own
+  worktree logic: `claude -w <name>` gets a worktree beside its repo, at
+  `<workspace>/.worktrees/<name>`. Under the repo, Node and TypeScript would
+  resolve a module missing from the worktree in the primary clone's
+  `node_modules`, and the primary clone's tools would walk into it. It
+  fetches origin and adds the worktree detached at `origin/main`;
+  `work-issue` creates or checks out the branch. It refuses a name that is
+  not `[a-z0-9][a-z0-9._-]*`, and a repo not directly under a workspace that
+  carries `CLAUDE.md`, the workspace itself included.
+- `worktree-remove.sh` — `WorktreeRemove`: removes that worktree and prunes,
+  never the primary clone. Claude Code leaves a hook-made worktree's branch
+  behind, so it deletes the branch too, but only when origin holds all of
+  it: an unpushed branch is kept.
+
 They require `jq` and `perl` on the PATH. `hooks/tests/run.sh` runs every case
-in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s and the
-skills' checks; the `hooks` workflow runs it on every PR that touches the
-hooks, the skills or the references.
+in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s, the
+worktree scripts' (on a throwaway origin and workspace) and the skills'
+checks; the `hooks` workflow runs it on every PR that touches the hooks, the
+skills or the references.
 
 ## Versioning
 

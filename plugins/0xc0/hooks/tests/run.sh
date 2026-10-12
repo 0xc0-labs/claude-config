@@ -19,6 +19,7 @@ done < "$here/cases.jsonl"
 echo "$((n - failed))/$n cases pass"
 # board.sh prints instead of blocking: its own cases, from a fixture.
 bash "$here/board.sh" || failed=$((failed + 1))
+bash "$here/worktree.sh" || failed=$((failed + 1))
 # Not a hook: the skills' commands, as a session gets them.
 bash "$here/skills.sh" || failed=$((failed + 1))
 [ "$failed" -eq 0 ]
