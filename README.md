@@ -42,15 +42,16 @@ Then start a new session: plugins load at startup.
 | Skill          | What for                                                  |
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
-| `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, wakes each repo's session, checks the whole set |
+| `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, starts each repo's autopilot (again when a blocker closes), has a subagent in its own worktree make the workspace's own changes, files a session's `Needs:` as an issue its own is blocked by, weighs a shared package where code repeats across repos, reviews every ready PR (on a finding: a comment, back to draft, the issue Ready again), marks its own ready, checks the whole set |
 | `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), marks it ready once it can be merged (checks green, gentle-ai's review approved and acknowledged, nothing in the issue left, no `.claude/` patch for the operator) or says why it stays a draft, as where `gh pr ready` is denied, reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
 workspace's `docs/design/how-we-work.md`). A repo's session, named as the
 workspace's `CLAUDE.md` says (Sessions), starts working with
-`claude -n <name> "/0xc0:work-issue"`. The workspace's autopilot starts one
-fresh session per issue, in its own worktree,
+`claude -n <name> "/0xc0:work-issue"`. The workspace's autopilot, which the
+orchestrator starts once it sets a repo's issues Ready, starts one fresh
+session per issue, in its own worktree,
 `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`,
 and closes it on its last line, `work-issue: done <repo>#<n>` or
 `work-issue: stopped …`. Skills tied to one repo live in that repo's
