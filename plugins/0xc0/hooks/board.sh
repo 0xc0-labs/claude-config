@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# SessionStart, never blocking a session. What it loads and why its cache is
-# shared: the README, Hooks.
+# SessionStart. What it loads, and why it shares one cache: the README, Hooks.
 set -uo pipefail
 
 cache_ttl_seconds=120
