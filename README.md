@@ -64,7 +64,9 @@ and each skill links to it.
 Claude Code replaces a bare `$1`, `$2`… in a `SKILL.md` with words of the
 skill's arguments, so a snippet braces them, `"${1}"`, or uses a named
 variable. A session's shell can be zsh, where arrays start at 1, so no snippet
-uses one. `hooks/tests/skills.sh` fails on either.
+uses one. In a worktree, Claude Code refuses a command that runs git inside
+`$(…)`, so no snippet does: plain calls, and the session decides from what
+they print. `hooks/tests/skills.sh` fails on any of the three.
 
 ## Hooks
 

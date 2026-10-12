@@ -18,4 +18,12 @@ declare -a U # bad
 read -r line <<<"one two"
 jq -r '[.items[] | select(.name==$n)] | .[0].id' <<<"$board"
 x=$(gh issue view 1 --json id -q .id)
+branch=$(git branch --show-current) # bad
+echo "$(git rev-parse --short HEAD)" # bad
+repo=$(git remote get-url origin | sed -E 's#.*0xc0-labs/##') # bad
+x=$(echo a | git hash-object --stdin) # bad
+git rev-parse --short HEAD && git status --short
+git log -1 --format=%h | cat
+if git rev-parse --short HEAD; then echo ok; fi
+x=$(gitleaks detect)
 ```
