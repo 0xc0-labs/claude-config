@@ -30,9 +30,9 @@ left on a merged PR's branch runs it on a stale copy. Every time this step
 runs (at the session's start, at each `/0xc0:work-issue`, when a message
 wakes it, news of its own PR merged included, and from step 7), before the
 board, it puts the checkout back on an up-to-date `main`, unless it is in
-the middle of its own open PR. In a linked worktree, `main` is checked out in the primary clone and
-`git switch main` fails there: it detaches at the fetched `origin/main`
-instead.
+the middle of its own open PR. In a linked worktree, `main` is checked out
+in the primary clone and `git switch main` fails there: it detaches at the
+fetched `origin/main` instead.
 
 ```sh
 git fetch --prune --quiet origin
