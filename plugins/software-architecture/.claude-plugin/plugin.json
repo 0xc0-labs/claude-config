@@ -1,0 +1,8 @@
+{
+  "name": "software-architecture",
+  "description": "Hexagonal architecture, domain-driven design and REST API design for the org's application repos",
+  "version": "0.1.0",
+  "author": {
+    "name": "sergioaten"
+  }
+}
