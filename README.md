@@ -56,6 +56,15 @@ and closes it on its last line, `work-issue: done <repo>#<n>` or
 `work-issue: stopped …`. Skills tied to one repo live in that repo's
 `.claude/skills/` instead — see `infrastructure/`.
 
+A repo session's report also names what reaches past its repo, for the
+orchestrator to weigh. `Shared code:` when its work copies or follows code
+another repo already has: it still finishes the issue, since a shared
+package in `0xc0-labs/packages` is the orchestrator's call
+(workspace#121). `Needs:` when the issue cannot be finished without a
+change in another repo, a package included: it pushes what it has, sets
+the issue Blocked and stops with `work-issue: stopped <repo>#<n>: needs …`,
+never editing that repo or copying the package's code as a workaround.
+
 What both `orchestrate` and `work-issue` do on GitHub, relating two issues
 and backing off a rate limit, lives once in
 [`plugins/0xc0/references/github.md`](plugins/0xc0/references/github.md),
