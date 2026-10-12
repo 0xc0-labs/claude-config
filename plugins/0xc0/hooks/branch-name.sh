@@ -5,6 +5,7 @@ set -uo pipefail
 cmd="$(jq -r '.tool_input.command // ""')"
 [ -z "$cmd" ] && exit 0
 
+# Catches git [-C <dir>] checkout -b|-B and switch -c|-C|--create|--force-create.
 new_branches="$(printf '%s' "$cmd" | perl -ne '
   # The flags between the subcommand and -c stay within one command: they never
   # cross ;, & or |, or a later "git -C dir" would read as "switch -C dir".
