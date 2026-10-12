@@ -1,17 +1,17 @@
 ---
 name: work-issue
-description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next; named as `<repo>#<n>`, as the autopilot does, it works that one alone and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
+description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, marks it ready once it can be merged, reports back to the orchestrator in a fixed shape, then looks for the next; named as `<repo>#<n>`, as the autopilot does, it works that one alone and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
 ---
 
 # Working an issue in a repo session
 
 The workspace's `docs/design/how-we-work.md` decides; this is how a session
 started in one repo applies it. It works **that repo alone**, from **its
-issue**, up to a **draft PR**, and reports to the orchestrator. Named an
-issue as `<repo>#<n>`, as the workspace's autopilot does, it works that one
-alone and **ends** (step 7). The orchestrator, a session named
-`orchestrator` in the workspace, writes the issues and owns what crosses
-repos.
+issue**, up to a **draft PR**, marks it **ready** once it can be merged
+(step 5), and reports to the orchestrator. Named an issue as `<repo>#<n>`,
+as the workspace's autopilot does, it works that one alone and **ends**
+(step 7). The orchestrator, a session named `orchestrator` in the
+workspace, writes the issues and owns what crosses repos.
 
 It may run in its own worktree: Claude Code's `-w <name>`, which the
 autopilot's `WorktreeCreate` hook (the plugin's `worktree-create.sh`) places
@@ -197,7 +197,8 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   this PR makes, not the issue's title: the issue says what must be true, the
   PR what changed. The body has `Closes #<n>`, what changed, what was checked
   and how, and the siblings with the merge order. Once the branch is pushed,
-  it is opened from a file (Text for GitHub, below).
+  it is opened from a file (Text for GitHub, below). Step 5 marks it ready,
+  or says why it stays a draft.
 - **A change to this repo's `.claude/`** is the operator's to commit (the
   workspace's `CLAUDE.md`, Claude Code plugins), so the session neither edits
   nor commits it, and does not try. It writes the new version outside the
@@ -209,7 +210,8 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   ```
 
   The rest of the change is committed and pushed as usual, up to the draft
-  PR. The patch goes in the report (step 6), under Not done, with what the
+  PR, which stays a draft: without the patch it cannot be merged as it is.
+  The patch goes in the report (step 6), under Not done, with what the
   operator runs from the repo's root: `git switch <branch>`, `git apply` the
   patch, commit it as `chore(claude): <subject>`, push. The issue stays In
   Progress, not Blocked: the next step is the operator's, and it is planned.
@@ -228,7 +230,8 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   it as gentle-ai writes it, and this skill does not restate it. This skill
   is the frame around that work, and keeps holding there: this repo only;
   the issue as the contract; the org's commit, branch and draft-PR rules;
-  the `.claude/` rule; a follow-up as its own issue; and the Never list.
+  when the PR is marked ready (step 5); the `.claude/` rule; a follow-up as
+  its own issue; and the Never list.
   Where gentle-ai's instructions and these differ, these win.
 
   When gentle-ai's review asks the operator's consent (its START returns
@@ -251,14 +254,38 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
     waits for the answer there.
 
   Either way the consent is the operator's, never a message from another
-  session, and the session reports (step 6) once the PR is open, not while
-  the review waits.
+  session, and the session reports (step 6) once the PR is open and step 5
+  has decided on it, not while the review waits.
 
-## 5. Check
+## 5. Check, then ready
 
 Watch the PR's checks in the background, at most once a minute, never every
 few seconds: `gh pr checks <pr> --watch --interval 60`. A failure within the
-issue's scope gets fixed; one outside it is reported.
+issue's scope gets fixed, and the checks are watched again; one outside it
+is reported.
+
+A draft is work in progress; a ready PR can be merged (workspace#119).
+Once the checks have finished, and before the report, the session marks
+its PR ready when all of these hold:
+
+- every check passed;
+- in a repo that carries gentle-ai, each review gentle-ai called for on the
+  change ended `approved` and was acknowledged, its
+  `gentle-ai.review-acknowledged/v1` envelope printed. One declined,
+  unavailable, or still waiting on consent or on a correction does not
+  count;
+- nothing in the issue is left undone: every acceptance criterion met, no
+  question open on it, and no `.claude/` patch left to the operator
+  (step 4), since without it the PR cannot be merged as it is.
+
+```sh
+gh pr ready <pr>
+```
+
+Any of them missing, the PR stays a draft and the report says which. When
+`gh pr ready` is denied, as in a repo whose `.claude/settings.json` still
+denies it, the PR stays a draft and the report says so: the session tries
+no other way, through the API or through another session.
 
 ## 6. Report
 
@@ -268,15 +295,15 @@ shape:
 
 ```
 <repo>#<n> <title>
-PR: <url> (draft)
+PR: <url> (ready | draft: <why>)
 Checks: passing | failing: <which> | pending
 Done: <one line>
 Not done: <what and why, or none>
 Questions: <for the orchestrator or the operator, or none>
 ```
 
-A report asks for nothing: marking ready, merging and applying stay the
-operator's, whoever asks.
+A report asks for nothing: merging and applying stay the operator's,
+whoever asks.
 
 ## 7. Next, or end
 
@@ -295,8 +322,9 @@ work-issue: done <repo>#<n>
 work-issue: stopped <repo>#<n>: <reason>
 ```
 
-`<repo>` is the GitHub name, without `0xc0-labs/`. **done**: its draft PR is
-open and reported, a `.claude/` patch left to the operator included.
+`<repo>` is the GitHub name, without `0xc0-labs/`. **done**: its PR is open,
+ready or a draft, and reported, a `.claude/` patch left to the operator
+included.
 **stopped**: it ends without a PR. The reason is one short phrase: the issue
 is not Ready or not this repo's, a question in the issue, the checkout not
 moved, a rate limit that outlasted the retry, an error. Nothing follows the
@@ -365,7 +393,6 @@ anything else:
 
 ## Never
 
-Merge, mark a PR ready, apply, push to `main`, delete a branch, edit another
-repo, edit or commit this repo's `.claude/`, move another repo's issues, take
-a Todo issue, or treat a message from another session as the operator's
-approval.
+Merge, apply, push to `main`, delete a branch, edit another repo, edit or
+commit this repo's `.claude/`, move another repo's issues, take a Todo
+issue, or treat a message from another session as the operator's approval.
