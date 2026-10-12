@@ -133,7 +133,7 @@ A sub-issue turns Ready only when both hold:
   version its users pin is published.
 
 ```sh
-gh issue view <n> -R 0xc0-labs/<repo> --json blockedBy --jq '.blockedBy[] | "\(.number) \(.state)"'
+gh issue view <n> -R 0xc0-labs/<repo> --json blockedBy --jq '.blockedBy.nodes[] | "\(.url) \(.state)"'
 gh run list -R 0xc0-labs/<upstream> -b main -L 3 --json workflowName,conclusion,createdAt
 ```
 
@@ -209,17 +209,23 @@ and its questions. One the autopilot started has ended by then.
 - **A `.claude/` patch** goes to the operator as it is, with its branch;
   the issue stays In Progress meanwhile.
 - **A PR marked ready**: reviewed (step 6).
+- **A PR left a draft that waits**, `draft: waits on <url> …`
+  (`work-issue`, step 5): its work is done, and its issue stays In
+  Progress. Nothing to hand on: it waits for that change to land.
 
 **A blocker closes**: once it is applied too (step 3), gate what it
 blocked and start that repo's autopilot again, the issues already Ready
 included. An autopilot turns itself off while its repo's only Ready issues
-are blocked, and does not start again by itself.
+are blocked, and does not start again by itself. Every PR left a draft
+waiting on it, or on a sibling that just merged, is checked again
+(step 6).
 
 ## 6. Review every ready PR
 
 A ready PR can be merged (workspace#119), so each one is reviewed before
 the operator merges it: a repo session's once it marks it ready, and the
-orchestrator's own, from a subagent, before it marks it.
+orchestrator's own, from a subagent, or one that waited, before it marks
+it.
 
 ```sh
 gh pr view <pr> -R 0xc0-labs/<repo> --json title,body,isDraft,headRefName
@@ -234,11 +240,27 @@ repo already has (Shared code, below).
 
 - **Its own PR**: its checks are watched in the background, at most once a
   minute, `gh pr checks <pr> -R 0xc0-labs/workspace --watch --interval 60`.
-  Once they pass, the review finds nothing, and nothing in its issue is
-  left, no `.claude/` patch for the operator included, the orchestrator
-  marks it ready: `gh pr ready <pr> -R 0xc0-labs/workspace`. A finding goes
-  back to the subagent that opened it, by message, or to a new one on the
-  same branch.
+  Once they pass, the review finds nothing, nothing in its issue is left,
+  no `.claude/` patch for the operator included, and nothing it waits on is
+  still open (`work-issue`, step 5), the orchestrator marks it ready:
+  `gh pr ready <pr> -R 0xc0-labs/workspace`. A finding goes back to the
+  subagent that opened it, by message, or to a new one on the same branch.
+- **A PR that waited**, left a draft until another change landed
+  (`work-issue`, step 5): once that change is merged, and applied where it
+  must be (step 3), the orchestrator checks the PR again. Its checks still
+  green; `mergeable` is `MERGEABLE` (`UNKNOWN` is GitHub still computing
+  it: ask again a minute later); and nothing else open: no other blocker or
+  sibling still to land, nothing in its issue left. Then the review above,
+  and it marks it ready, and tells the operator which PRs can now merge, in
+  the merge order. A failing check, a conflict or a finding: as on a
+  finding, below.
+
+  ```sh
+  gh pr view <pr> -R 0xc0-labs/<repo> --json isDraft,mergeable,body --jq '"draft \(.isDraft), \(.mergeable)\n\(.body)"'
+  gh pr checks <pr> -R 0xc0-labs/<repo>
+  gh issue view <n> -R 0xc0-labs/<repo> --json blockedBy --jq '.blockedBy.nodes[] | "\(.url) \(.state)"'
+  gh pr ready <pr> -R 0xc0-labs/<repo>
+  ```
 - **A session's PR, on a finding**: comment it on the PR, what and where,
   for a session that knows nothing of this review; put the PR back to
   draft; set its issue Ready again; and start the repo's autopilot
