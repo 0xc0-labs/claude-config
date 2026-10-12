@@ -42,8 +42,8 @@ Then start a new session: plugins load at startup.
 | Skill          | What for                                                  |
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
-| `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, starts each repo's autopilot (again when a blocker closes), has a subagent in its own worktree make the workspace's own changes, files a session's `Needs:` as an issue its own is blocked by, weighs a shared package where code repeats across repos, reviews every ready PR (on a finding: a comment, back to draft, the issue Ready again), marks its own ready, checks the whole set |
-| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), marks it ready once it can be merged (checks green, gentle-ai's review approved and acknowledged, nothing in the issue left, no `.claude/` patch for the operator) or says why it stays a draft, as where `gh pr ready` is denied, reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
+| `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, starts each repo's autopilot (again when a blocker closes), has a subagent in its own worktree make the workspace's own changes, files a session's `Needs:` as an issue its own is blocked by, weighs a shared package where code repeats across repos, reviews every ready PR (on a finding: a comment, back to draft, the issue Ready again), marks its own ready, marks ready a PR left a draft for another change once that change lands, checks the whole set |
+| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), marks it ready once it can be merged (checks green, gentle-ai's review approved and acknowledged, nothing in the issue left, no `.claude/` patch for the operator, nothing it waits on still open) or says why it stays a draft, as where `gh pr ready` is denied, reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
@@ -65,6 +65,15 @@ package in `0xc0-labs/packages` is the orchestrator's call
 change in another repo, a package included: it pushes what it has, sets
 the issue Blocked and stops with `work-issue: stopped <repo>#<n>: needs …`,
 never editing that repo or copying the package's code as a workaround.
+
+A ready PR can be merged (workspace#119), so a PR whose work is done but
+that may merge only after another change lands stays a draft: while its
+issue has an open "blocked by", a sibling that merges first is still open,
+or an upstream change it depends on is merged but not yet applied. The
+report says on what, `draft: waits on <url> …`, the issue stays In
+Progress, and the session ends as done. Once that change lands, the
+orchestrator checks the PR again (checks still green, mergeable, nothing
+else open), marks it ready, and tells the operator in the merge order.
 
 What both `orchestrate` and `work-issue` do on GitHub, relating two issues
 and backing off a rate limit, lives once in

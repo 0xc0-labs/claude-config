@@ -293,7 +293,8 @@ its PR ready when all of these hold:
   count;
 - nothing in the issue is left undone: every acceptance criterion met, no
   question open on it, and no `.claude/` patch left to the operator
-  (step 4), since without it the PR cannot be merged as it is.
+  (step 4), since without it the PR cannot be merged as it is;
+- nothing it waits on is still open (What it waits on, below).
 
 ```sh
 gh pr ready <pr>
@@ -303,6 +304,44 @@ Any of them missing, the PR stays a draft and the report says which. When
 `gh pr ready` is denied, as in a repo whose `.claude/settings.json` still
 denies it, the PR stays a draft and the report says so: the session tries
 no other way, through the API or through another session.
+
+### What it waits on
+
+A downstream change is not merged until the upstream one is applied (the
+workspace's `CLAUDE.md`), and siblings merge in their order: a green PR
+that may merge only after another change lands is not ready yet. Right
+before marking it, the session reads again what it waits on:
+
+- its issue's "blocked by" still open, which may have been added since
+  step 3:
+
+  ```sh
+  gh issue view <n> --json blockedBy --jq '.blockedBy.nodes[] | select(.state == "OPEN") | .url'
+  ```
+- each sibling that merges before this one, by the merge order in its issue
+  or in its PR's body, not merged yet: a PR whose state is not `MERGED`, or
+  a sibling named only by its issue, still `OPEN`, since it closes through
+  its PR:
+
+  ```sh
+  gh pr view <sibling-pr-url> --json state,mergedAt --jq '"\(.state) \(.mergedAt)"'
+  gh issue view <sibling-issue-url> --json state --jq .state
+  ```
+- an upstream change that is merged but not yet applied, where its issue or
+  the sibling's says it is applied after the merge (its Operator steps):
+  applied once the run that applies it on that repo's `main`, created after
+  its `mergedAt`, ended `success`. One the session cannot tell, as ArgoCD's
+  sync or a package not yet published, counts as not applied:
+
+  ```sh
+  gh run list -R 0xc0-labs/<upstream> -b main -L 5 --json workflowName,status,conclusion,createdAt
+  ```
+
+Any of them open, the PR stays a draft, and the report's PR line says on
+what: `draft: waits on <url> to close`, `to merge` or `to be applied`. The
+issue stays In Progress, not Blocked: the work is done, and what is left is
+the orchestrator's, planned: once that change lands, it checks the PR again
+and marks it ready (`orchestrate`, step 6).
 
 ## 6. Report
 
@@ -344,7 +383,7 @@ work-issue: stopped <repo>#<n>: <reason>
 
 `<repo>` is the GitHub name, without `0xc0-labs/`. **done**: its PR is open,
 ready or a draft, and reported, a `.claude/` patch left to the operator
-included.
+included, and a draft that waits on another change to land (step 5).
 **stopped**: it ends without a PR, or with its PR left a draft because
 the issue needs another repo's change first (step 4). The reason is one
 short phrase: the issue is not Ready or not this repo's, a question in the
