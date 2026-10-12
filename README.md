@@ -5,6 +5,7 @@ Claude Code marketplace and plugin for the `0xc0-labs` organization.
 ```
 .claude-plugin/marketplace.json   the marketplace
 plugins/0xc0/                  the plugin
+plugins/software-architecture/ the architecture skills plugin
   skills/                         3 skills
   references/                     what more than one skill links to
   hooks/                          guardrails, commit and branch conventions, board loader
@@ -91,6 +92,19 @@ reference is read, not expanded, but its snippets run in the same shell.
 Nor does `work-issue` pass `gh` a title, a body or a comment on the command
 line: there too, a text that names git is refused (claude-config#56), so it
 goes in a file.
+
+## The `software-architecture` plugin
+
+Three skills a session loads when it designs or reviews application code:
+`hexagonal-architecture`, `domain-driven-design` and `rest-api-design`.
+Each is written from scratch and cites its primary sources (books, RFCs,
+the OpenAPI specification, public API guidelines) by name and version.
+The application repos enable it (the Next.js and Payload ones); the
+infrastructure repos do not load it. The text was drafted with Opus
+(workspace#151). Enable it as `0xc0` is, with
+`"software-architecture@0xc0-labs": true` in `enabledPlugins`, and install it
+with `claude plugin install software-architecture@0xc0-labs --scope project`.
+Its version lives in its own `plugin.json`, and a change under it bumps it.
 
 ## Hooks
 

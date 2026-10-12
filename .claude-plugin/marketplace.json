@@ -15,6 +15,15 @@
       "author": {
         "name": "sergioaten"
       }
+    },
+    {
+      "name": "software-architecture",
+      "displayName": "software-architecture",
+      "source": "./plugins/software-architecture",
+      "description": "Hexagonal architecture, domain-driven design and REST API design skills",
+      "author": {
+        "name": "sergioaten"
+      }
     }
   ]
 }
