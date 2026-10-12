@@ -1,15 +1,17 @@
 ---
 name: work-issue
-description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
+description: A repo session's side of how the org works. Starts from an up-to-date main (in its own worktree, the fetched origin/main) unless its own PR is open, claims this repo's Ready issue of highest priority from the org board (or the one named, `<n>` or `<repo>#<n>`), works it from the issue as its contract up to a draft PR, reports back to the orchestrator in a fixed shape, then looks for the next; named as `<repo>#<n>`, as the autopilot does, it works that one alone and ends with a fixed last line. Use when a session started in a repo is asked to work, is woken by the orchestrator, or is started as `claude -n <name> "/0xc0:work-issue"`, or by the autopilot as `claude --settings <hooks> -n <name>-<n> -w <name>-<n> "/0xc0:work-issue <repo>#<n>"`.
 ---
 
 # Working an issue in a repo session
 
 The workspace's `docs/design/how-we-work.md` decides; this is how a session
 started in one repo applies it. It works **that repo alone**, from **its
-issue**, up to a **draft PR**, reports to the orchestrator, and **ends**: one
-issue per session. The orchestrator, a session named `orchestrator` in the
-workspace, writes the issues and owns what crosses repos.
+issue**, up to a **draft PR**, and reports to the orchestrator. Named an
+issue as `<repo>#<n>`, as the workspace's autopilot does, it works that one
+alone and **ends** (step 7). The orchestrator, a session named
+`orchestrator` in the workspace, writes the issues and owns what crosses
+repos.
 
 It may run in its own worktree: Claude Code's `-w <name>`, which the
 autopilot's `WorktreeCreate` hook (the plugin's `worktree-create.sh`) places
@@ -25,10 +27,10 @@ use none, and neither does one written on the spot.
 First the checkout. A session reads this repo's `.claude/settings.json`,
 `CLAUDE.md` and skills from the working tree when it starts, so a checkout
 left on a merged PR's branch runs it on a stale copy. Every time this step
-runs (at the session's start, at each `/0xc0:work-issue`, and when a message
-wakes it, news of its own PR merged included), before the board, it puts the
-checkout back on an up-to-date `main`, unless it is in the middle of its own
-open PR. In a linked worktree, `main` is checked out in the primary clone and
+runs (at the session's start, at each `/0xc0:work-issue`, when a message
+wakes it, news of its own PR merged included, and from step 7), before the
+board, it puts the checkout back on an up-to-date `main`, unless it is in
+the middle of its own open PR. In a linked worktree, `main` is checked out in the primary clone and
 `git switch main` fails there: it detaches at the fetched `origin/main`
 instead.
 
@@ -95,12 +97,13 @@ gh api graphql -f repo="$repo" -f query='query($repo: String!) {
   `<repo>` is the GitHub name, as issues are referenced (`.github#61`,
   `offby1.cc#27`), with or without `0xc0-labs/` before it. That one, only if
   `<repo>` is this repo (`$repo` above) and the issue is Ready, or already In
-  Progress from this session's earlier work. Otherwise it says why and ends
-  (step 7).
+  Progress from this session's earlier work. Otherwise it says why and
+  stops (step 7).
 - **None named**: the first Ready one.
 
-- **Nothing Ready**: say so in one line and end (step 7). Never take a Todo
-  issue: Todo is not a complete contract, or it waits on another repo.
+- **Nothing Ready**: say so in one line and stop. The orchestrator messages
+  this session when something turns Ready. Never take a Todo issue: Todo is
+  not a complete contract, or it waits on another repo.
 
 ## 2. Claim it
 
@@ -137,7 +140,7 @@ give:
 This session cannot read the workspace's design without asking: what the work
 needs is quoted in the issue, or it is missing. **Missing, contradictory or
 still blocked: do not guess.** Comment the question on the issue, move it to
-Blocked, report (step 6), and end (step 7).
+Blocked, report (step 6), and stop (step 7).
 
 ## 4. Work it
 
@@ -157,7 +160,8 @@ Blocked, report (step 6), and end (step 7).
     (or takes the local one), then `git merge --ff-only origin/<branch>`.
     The work continues there, onto the PR already open; that PR's comments
     and reviews (`gh pr view <branch> --json comments,reviews`) count with
-    the issue's. A local branch that diverged from origin: report and end.
+    the issue's. A local branch that diverged from origin: report and stop
+    (step 7).
   - **Not on origin**: `git switch -c <branch> origin/main`.
 - Up to a **draft** PR. Its title is a Conventional Commit for the change
   this PR makes, not the issue's title: the issue says what must be true, the
@@ -225,26 +229,29 @@ Questions: <for the orchestrator or the operator, or none>
 A report asks for nothing: marking ready, merging and applying stay the
 operator's, whoever asks.
 
-## 7. End
+## 7. Next, or end
 
-One issue per session: it does not take the next one. The autopilot, or the
-operator, starts a fresh session for the next. After the report, or wherever
-an earlier step says to end, the very last line of the session's output,
-alone on it, is exactly one of:
+**Started as `/0xc0:work-issue`, or with a bare number** (a session opened by
+hand, or woken by the orchestrator): back to step 1 before stopping: a
+session that finishes one issue takes the next Ready one by itself. It
+prints no `work-issue:` line.
+
+**Started as `/0xc0:work-issue <repo>#<n>`** (the autopilot's launch, one
+fresh session per issue): that issue alone; it does not take the next. After
+the report, or wherever an earlier step says to stop, the very last line of
+the session's output, alone on it, is exactly one of:
 
 ```
 work-issue: done <repo>#<n>
 work-issue: stopped <repo>#<n>: <reason>
-work-issue: stopped <repo>: nothing Ready
 ```
 
 `<repo>` is the GitHub name, without `0xc0-labs/`. **done**: its draft PR is
 open and reported, a `.claude/` patch left to the operator included.
 **stopped**: it ends without a PR. The reason is one short phrase: the issue
-named is not Ready or not this repo's, a question in the issue, the checkout
-not moved, a rate limit that outlasted the retry, an error. The third line
-is for when no issue was named and none is Ready. Nothing follows the line:
-the autopilot reads it to close the tab.
+is not Ready or not this repo's, a question in the issue, the checkout not
+moved, a rate limit that outlasted the retry, an error. Nothing follows the
+line: the autopilot reads it to close the tab.
 
 A session waiting on the operator, for gentle-ai's consent or anything else,
 has not ended: it prints no last line until it does.
