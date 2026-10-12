@@ -22,7 +22,8 @@ The session is named after its repo, as the workspace's `CLAUDE.md` says
 (Sessions). Its shell can be zsh, where arrays start at 1: the snippets here
 use none, and neither does one written on the spot. In a worktree, Claude
 Code refuses a command that runs git inside `$(…)`, unable to tell that it
-stays in the worktree (#54): the snippets here are plain calls, the session
+stays in the worktree (claude-config#54): the snippets here are plain
+calls, the session
 decides from what they print, and it carries a value from one call to the
 next as written, `<branch>` or `<before>`, since no shell variable outlives
 its call.
