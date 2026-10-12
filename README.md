@@ -43,7 +43,7 @@ Then start a new session: plugins load at startup.
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
 | `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, wakes each repo's session, checks the whole set |
-| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone and ends with a fixed last line |
+| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
