@@ -5,16 +5,15 @@ description: A repo session's side of how the org works. Starts from an up-to-da
 
 # Working an issue in a repo session
 
-The workspace's `docs/design.md`, How we work, decides; this is how a session
+The workspace's `docs/design/how-we-work.md` decides; this is how a session
 started in one repo applies it. It works **that repo alone**, from **its
 issue**, up to a **draft PR**, and reports to the orchestrator. The
 orchestrator, a session named `orchestrator` in the workspace, writes the
 issues and owns what crosses repos.
 
-The session is named after its repo as Herdr names an agent: dots to dashes,
-a leading dot dropped (`github`, `offby1-cc`, `artistlabco-com`). Its shell
-can be zsh, where arrays start at 1: the snippets here use none, and neither
-does one written on the spot.
+The session is named after its repo, as the workspace's `CLAUDE.md` says
+(Sessions). Its shell can be zsh, where arrays start at 1: the snippets here
+use none, and neither does one written on the spot.
 
 ## 1. Which repo, which issue
 
@@ -133,15 +132,11 @@ Blocked, report (step 6), and stop.
   this PR makes, not the issue's title: the issue says what must be true, the
   PR what changed. The body has `Closes #<n>`, what changed, what was checked
   and how, and the siblings with the merge order.
-- **A change to this repo's `.claude/`** is the operator's to commit. The
-  workspace's rule (`CLAUDE.md`, Claude Code plugins): "A change to a repo's
-  `.claude/` is committed by the operator. A session's permission classifier
-  refuses to commit its own Claude Code configuration, as self-modification:
-  the session prepares the change and says so, the operator commits and
-  pushes it." So the session neither edits nor commits it, and does not try.
-  It writes the new version outside the repo, in its scratch directory, and
-  diffs it into a patch that `git apply` takes as is (a new file: `/dev/null`
-  and `--label /dev/null` first):
+- **A change to this repo's `.claude/`** is the operator's to commit (the
+  workspace's `CLAUDE.md`, Claude Code plugins), so the session neither edits
+  nor commits it, and does not try. It writes the new version outside the
+  repo, in its scratch directory, and diffs it into a patch that `git apply`
+  takes as is (a new file: `/dev/null` and `--label /dev/null` first):
 
   ```sh
   diff -u --label a/.claude/settings.json --label b/.claude/settings.json .claude/settings.json <scratch>/settings.json
@@ -154,7 +149,7 @@ Blocked, report (step 6), and stop.
   Progress, not Blocked: the next step is the operator's, and it is planned.
 - A follow-up the work turns up gets its own issue in this repo: titled by its
   outcome or problem, with its type, on the board as Todo, related to this one
-  (step 7, Relate):
+  (Relate, below):
 
   ```sh
   gh project item-add 1 --owner 0xc0-labs --url <issue-url>
@@ -208,29 +203,14 @@ next Ready one by itself.
 
 Besides parent and "blocked by", which the orchestrator sets, link what
 belongs together: a follow-up and the issue that produced it, a fix and the
-issue whose change caused it, two issues touching the same thing. `gh` has no
-flag for it yet:
-
-```sh
-relate() {  # relate <owner/repo#n> <owner/repo#n>
-  a=$(gh issue view "${1#*#}" -R "${1%#*}" --json id -q .id)
-  b=$(gh issue view "${2#*#}" -R "${2%#*}" --json id -q .id)
-  gh api graphql -f query='mutation($a:ID!,$b:ID!){ addRelatesTo(input:{issueId:$a, relatedIssueId:$b}) { clientMutationId } }' -f a="$a" -f b="$b" >/dev/null
-}
-```
+issue whose change caused it, two issues touching the same thing. How:
+[`references/github.md`, Relate two issues](../../references/github.md#relate-two-issues).
 
 ### When GitHub rate-limits
 
-The sessions share the operator's token, and the limit that bites is the
-secondary one on bursts, where every request during the penalty extends it.
-On "rate limit" or "submitted too quickly" from any `gh` call: stop calling
-GitHub, say so, and wait in the background, until the reset when the hourly
-quota is spent, a few minutes otherwise. Then try once more. Never an
-immediate retry, never a loop. The quota, without spending it:
-
-```sh
-gh api rate_limit --jq '.resources.graphql | "\(.remaining) left, reset \(.reset | todate)"'
-```
+On "rate limit" or "submitted too quickly" from any `gh` call, before
+anything else:
+[`references/github.md`, When GitHub rate-limits](../../references/github.md#when-github-rate-limits).
 
 ## Never
 

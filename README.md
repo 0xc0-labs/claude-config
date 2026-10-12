@@ -6,26 +6,36 @@ Claude Code marketplace and plugin for the `0xc0-labs` organization.
 .claude-plugin/marketplace.json   the marketplace
 plugins/0xc0/                  the plugin
   skills/                         3 skills
+  references/                     what more than one skill links to
   hooks/                          guardrails, commit and branch conventions, board loader
 ```
 
-## Consuming it from another repo
+## Installing
 
-In the repo's `.claude/settings.json`:
+Which repos enable it, and why each sets `autoUpdate`, is the workspace's
+`CLAUDE.md` (Claude Code plugins). In the repo's `.claude/settings.json`:
 
 ```json
 {
   "extraKnownMarketplaces": {
     "0xc0-labs": {
-      "source": { "source": "github", "repo": "0xc0-labs/claude-config" }
+      "source": { "source": "github", "repo": "0xc0-labs/claude-config" },
+      "autoUpdate": true
     }
   },
   "enabledPlugins": { "0xc0@0xc0-labs": true }
 }
 ```
 
-That declares and enables the plugin; each machine still installs it once, as
-described in **Installing** under Hooks.
+That declares and enables the plugin but does not install it. Once per
+machine, from the workspace:
+
+```bash
+claude plugin marketplace add 0xc0-labs/claude-config
+claude plugin install 0xc0@0xc0-labs --scope project
+```
+
+Then start a new session: plugins load at startup.
 
 ## Skills
 
@@ -37,11 +47,15 @@ described in **Installing** under Hooks.
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
-workspace's `docs/design.md`, How we work). A session is named after its repo
-as Herdr names an agent, dots to dashes and a leading dot dropped (`github`,
-`offby1-cc`), and starts working with `claude -n <name> "/0xc0:work-issue"`;
-the workspace's is `orchestrator`. Skills tied to one repo live in that repo's
-`.claude/skills/` instead — see `infrastructure/`.
+workspace's `docs/design/how-we-work.md`). A repo's session, named as the
+workspace's `CLAUDE.md` says (Sessions), starts working with
+`claude -n <name> "/0xc0:work-issue"`. Skills tied to one repo live in that
+repo's `.claude/skills/` instead — see `infrastructure/`.
+
+What both `orchestrate` and `work-issue` do on GitHub, relating two issues
+and backing off a rate limit, lives once in
+[`plugins/0xc0/references/github.md`](plugins/0xc0/references/github.md),
+and each skill links to it.
 
 Claude Code replaces a bare `$1`, `$2`… in a `SKILL.md` with words of the
 skill's arguments, so a snippet braces them, `"${1}"`, or uses a named
@@ -78,30 +92,15 @@ uses one. `hooks/tests/skills.sh` fails on either.
 They require `jq` and `perl` on the PATH. `hooks/tests/run.sh` runs every case
 in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s and the
 skills' checks; the `hooks` workflow runs it on every PR that touches the
-hooks or the skills.
-
-**Installing.** Declaring the plugin in a project's `.claude/settings.json`
-enables it but does not install it. Once per machine, from the workspace:
-
-```bash
-claude plugin marketplace add 0xc0-labs/claude-config
-claude plugin install 0xc0@0xc0-labs --scope project
-```
-
-Then start a new session: plugins load at startup. With `"autoUpdate": true`
-on the marketplace, as in this repo's `.claude/settings.json`, Claude Code
-refreshes it and updates the plugin in the background after startup; the
-next session, or `/reload-plugins`, loads the new version.
+hooks, the skills or the references.
 
 ## Versioning
 
 The plugin's version lives in `plugins/0xc0/.claude-plugin/plugin.json`
 alone: the marketplace entry declares none, since Claude Code takes
-`plugin.json`'s over it without warning. A session gets a new copy of the
-plugin only when that version changes, so **every change under
-`plugins/0xc0/` bumps `plugin.json`'s `version`**: that is what makes
-auto-updating sessions get it. The `plugin-version` workflow fails a PR that
-changes the plugin without a bump.
+`plugin.json`'s over it without warning. Every change under `plugins/0xc0/`
+bumps it (the workspace's `CLAUDE.md`, Claude Code plugins), and the
+`plugin-version` workflow fails a PR that does not.
 
 ## Validate
 
