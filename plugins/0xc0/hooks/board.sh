@@ -26,13 +26,18 @@ esac
 command -v jq >/dev/null 2>&1 || { echo "0xc0: jq not found, project board not loaded."; exit 0; }
 
 age() {
-  local m
+  local m now
   m="$(stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null)" || return 1
-  echo $(( $(date +%s) - m ))  # nosemgrep: unquoted-command-substitution-in-command - arithmetic expansion yields one integer
+  now="$(date +%s)"
+  echo $((now - m))
 }
 fresh() { [ -f "$cache" ] && [ "$(age "$cache")" -lt "$cache_ttl_seconds" ]; }
 paused() { [ -f "$limited" ] && [ "$(age "$limited")" -lt "$rate_limit_pause_seconds" ]; }
-limit_note() { echo "rate-limited, no new read for $(( (rate_limit_pause_seconds - $(age "$limited") + 59) / 60 )) min"; }  # nosemgrep: unquoted-command-substitution-in-command - arithmetic expansion yields one integer
+limit_note() {
+  local elapsed
+  elapsed="$(age "$limited")"
+  echo "rate-limited, no new read for $(( (rate_limit_pause_seconds - elapsed + 59) / 60 )) min"
+}
 
 read_board() {  # prints why it failed, and nothing on success
   local tmp err
@@ -78,7 +83,8 @@ fi
 note=""
 if [ -n "$why" ]; then
   [ -f "$cache" ] || { echo "0xc0: could not read the project board ($why)."; exit 0; }
-  note="0xc0: this board is $(( $(age "$cache") / 60 )) min old: a new read failed ($why)."  # nosemgrep: unquoted-command-substitution-in-command - arithmetic expansion yields one integer
+  cache_age="$(age "$cache")"
+  note="0xc0: this board is $((cache_age / 60)) min old: a new read failed ($why)."
 fi
 items="$(cat "$cache")"
 
