@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Enforces Conventional Commits and bans tooling trailers. See CLAUDE.md.
+# The rule: the workspace's CLAUDE.md, Commits.
 set -uo pipefail
 
 cmd="$(jq -r '.tool_input.command // ""')"
@@ -13,7 +13,6 @@ if printf '%s' "$cmd" | grep -Eq '[[:space:]](-F|--file)[=[:space:]]+-([[:space:
   msg="$(printf '%s' "$cmd" | perl -0777 -ne '
     print $2 if /\bgit\b[^\n;&|]*\bcommit\b[^\n]*?<<-?\s*["\x27]?(\w+)["\x27]?[^\n]*\n(.*?)\n\s*\1\s*(?:\n|$)/s')"
 elif printf '%s' "$cmd" | grep -Eq '[[:space:]]-([a-zA-Z]*m|-message)[=[:space:]]'; then
-  # Every -m value, any quoting, grouped short flags included (-qam).
   msg="$(printf '%s' "$cmd" | perl -ne '
     while (/(?:\s-[a-zA-Z]*m|\s--message)[= ]\s*("([^"\\]*(\\.[^"\\]*)*)"|'"'"'([^'"'"']*)'"'"'|(\S+))/g) {
       print defined($2) ? $2 : defined($4) ? $4 : $5; print "\n";
@@ -45,7 +44,6 @@ if printf '%s' "$subject" | grep -qE '\.$'; then
   exit 2
 fi
 
-# First word after the colon, lowercase and imperative.
 if printf '%s' "$subject" | grep -qE ': [A-Z]'; then
   echo "BLOCKED: subject starts with a capital. Use lowercase imperative: 'add x', not 'Add x'." >&2
   exit 2

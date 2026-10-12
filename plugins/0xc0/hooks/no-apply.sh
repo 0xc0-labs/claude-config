@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Blocks applies and playbooks without --check. Exit 2 = block; Claude reads stderr.
+# The rule: the workspace's CLAUDE.md, Rules that apply in every repo.
 set -uo pipefail
 
 cmd="$(jq -r '.tool_input.command // ""')"

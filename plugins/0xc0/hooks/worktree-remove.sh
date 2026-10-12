@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# WorktreeRemove: removes a linked worktree, never the primary clone. Claude
-# Code leaves a hook-created worktree's branch alone, so this deletes it, but
-# only when origin holds its commits: an unpushed branch is their only copy.
+# WorktreeRemove. What it removes, and why it keeps an unpushed branch: the
+# README, Hooks.
 set -uo pipefail
 
 path="$(jq -r '.worktree_path // ""')"

@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
-# SessionStart: puts the open items of the org project board into the session,
-# so no work starts without knowing what is tracked. Never blocks a session.
-#
-# In the workspace, the orchestrator's session, the whole board. In a repo's
-# own session, that repo's Ready, In Progress and Blocked issues, Ready by
-# priority, and only counts for the rest: the session works that repo alone.
-#
-# Every session runs on the operator's token, so they share GitHub's limits:
-# the board is read once for all of them, into a cache on this machine that
-# is reused for 120 seconds. Sessions starting together wait for the one that
-# holds the lock instead of reading it again. When a read fails, the last
-# board stands, with a note; when GitHub rate-limits it, no session asks again
-# for 5 minutes, since every request during the penalty extends it.
-#
-# The tests (tests/board.sh) put a stand-in gh first on the PATH.
+# SessionStart, never blocking a session. What it loads and why its cache is
+# shared: the README, Hooks.
 set -uo pipefail
 
-ttl=120       # seconds a read is reused
-pause=300     # seconds without a read after a rate limit
-patience=30   # seconds a session waits for the one reading
+cache_ttl_seconds=120
+rate_limit_pause_seconds=300
+lock_wait_seconds=30
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/0xc0"
 cache="$cache_dir/board.json"
 lock="$cache_dir/board.lock"
@@ -34,16 +21,16 @@ esac
 
 command -v jq >/dev/null 2>&1 || { echo "0xc0: jq not found, project board not loaded."; exit 0; }
 
-age() {  # age <path>: seconds since it was last written
+age() {
   local m
   m="$(stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null)" || return 1
   echo $(( $(date +%s) - m ))
 }
-fresh() { [ -f "$cache" ] && [ "$(age "$cache")" -lt "$ttl" ]; }
-paused() { [ -f "$limited" ] && [ "$(age "$limited")" -lt "$pause" ]; }
-limit_note() { echo "rate-limited, no new read for $(( (pause - $(age "$limited") + 59) / 60 )) min"; }
+fresh() { [ -f "$cache" ] && [ "$(age "$cache")" -lt "$cache_ttl_seconds" ]; }
+paused() { [ -f "$limited" ] && [ "$(age "$limited")" -lt "$rate_limit_pause_seconds" ]; }
+limit_note() { echo "rate-limited, no new read for $(( (rate_limit_pause_seconds - $(age "$limited") + 59) / 60 )) min"; }
 
-read_board() {  # one read into the cache; on failure, why, on stdout
+read_board() {  # prints why it failed, and nothing on success
   local tmp err
   paused && { limit_note; return 1; }
   command -v gh >/dev/null 2>&1 || { echo "gh not found"; return 1; }
@@ -75,7 +62,7 @@ if ! fresh; then
     trap - EXIT
   else
     waited=0
-    while [ -d "$lock" ] && [ "$waited" -lt $((patience * 2)) ]; do
+    while [ -d "$lock" ] && [ "$waited" -lt $((lock_wait_seconds * 2)) ]; do
       sleep 0.5; waited=$((waited + 1))
     done
     if ! fresh; then

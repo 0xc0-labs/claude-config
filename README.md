@@ -73,26 +73,29 @@ and each skill links to it.
 
 Claude Code replaces a bare `$1`, `$2`… in a `SKILL.md` with words of the
 skill's arguments, so a snippet braces them, `"${1}"`, or uses a named
-variable. A session's shell can be zsh, where arrays start at 1, so no snippet
-uses one. In a worktree, Claude Code refuses a command that runs git inside
-`$(…)`, so no snippet does: plain calls, and the session decides from what
-they print. `hooks/tests/skills.sh` fails on any of the three. Nor does
-`work-issue` pass `gh` a title, a body or a comment on the command line:
-there too, a text that names git is refused (claude-config#56), so it goes
-in a file.
+variable. A session's shell can be zsh, where arrays start at 1 and
+`mapfile` does not exist, so no snippet uses one. In a worktree, Claude Code
+refuses a command that runs git inside `$(…)` (claude-config#54), so no
+snippet does: plain calls, and the session decides from what they print.
+`hooks/tests/skills.sh` fails on any of the three, in the references too: a
+reference is read, not expanded, but its snippets run in the same shell.
+Nor does `work-issue` pass `gh` a title, a body or a comment on the command
+line: there too, a text that names git is refused (claude-config#56), so it
+goes in a file.
 
 ## Hooks
 
 - `board.sh` — `SessionStart`: loads the org project board into every
-  session, with the rule that no work starts without an issue. In the
-  workspace, the orchestrator's session, the whole board. In a repo's own
-  session, that repo's Ready (by priority), In Progress and Blocked issues,
-  and only counts for the rest. Every session shares the operator's token and
-  so GitHub's limits: the board is read once for all of them, into
-  `~/.cache/0xc0/board.json` (or under `$XDG_CACHE_HOME`), reused for 120
-  seconds, with a lock so sessions starting together read it once. A failed
-  read leaves the last board with a note; a rate limit pauses reads for five
-  minutes. `tests/board.sh` checks it against a stand-in `gh`.
+  session, with the rule that no work starts without an issue, and never
+  blocks one. In the workspace, the orchestrator's session, the whole board.
+  In a repo's own session, that repo's Ready (by priority), In Progress and
+  Blocked issues, and only counts for the rest. Every session shares the
+  operator's token and so GitHub's limits: the board is read once for all of
+  them, into `~/.cache/0xc0/board.json` (or under `$XDG_CACHE_HOME`), reused
+  for 120 seconds, with a lock so sessions starting together read it once. A
+  failed read leaves the last board with a note; a rate limit pauses reads
+  for five minutes, since every request during GitHub's penalty extends it.
+  `tests/board.sh` checks it against a stand-in `gh`.
 - `no-apply.sh` — blocks `tofu/terraform apply|destroy`, and `ansible-playbook`
   or `scripts/ansible` without `--check`.
 - `guard-files.sh` — blocks touching the state, and writing a secrets file
@@ -118,21 +121,23 @@ from the workspace's own checkout of this repo:
   worktree logic: `claude -w <name>` gets a worktree beside its repo, at
   `<workspace>/.worktrees/<name>`. Under the repo, Node and TypeScript would
   resolve a module missing from the worktree in the primary clone's
-  `node_modules`, and the primary clone's tools would walk into it. It
-  fetches origin and adds the worktree detached at `origin/main`;
-  `work-issue` creates or checks out the branch. It refuses a name that is
-  not `[a-z0-9][a-z0-9._-]*`, and a repo not directly under a workspace that
-  carries `CLAUDE.md`, the workspace itself included.
+  `node_modules`, and the primary clone's tools would walk into it
+  (workspace#103). It fetches origin and adds the worktree detached at
+  `origin/main`; `work-issue` creates or checks out the branch. It refuses a
+  name that is not `[a-z0-9][a-z0-9._-]*`, and a repo not directly under a
+  workspace that carries `CLAUDE.md`, the workspace itself included.
 - `worktree-remove.sh` — `WorktreeRemove`: removes that worktree and prunes,
   never the primary clone. Claude Code leaves a hook-made worktree's branch
   behind, so it deletes the branch too, but only when origin holds all of
-  it: an unpushed branch is kept.
+  it: an unpushed branch, the only copy of its commits, is kept.
 
-They require `jq` and `perl` on the PATH. `hooks/tests/run.sh` runs every case
-in `hooks/tests/cases.jsonl` through its hook, then `board.sh`'s, the
-worktree scripts' (on a throwaway origin and workspace) and the skills'
-checks; the `hooks` workflow runs it on every PR that touches the hooks, the
-skills or the references.
+They require `jq` and `perl` on the PATH. A hook blocks a tool call by
+exiting 2, and Claude reads why from its stderr; 0 lets it through.
+`hooks/tests/run.sh` runs every case in `hooks/tests/cases.jsonl` through its
+hook and compares that exit code with the case's `want`, then runs
+`board.sh`'s, the worktree scripts' (on a throwaway origin and workspace)
+and the skills' checks; the `hooks` workflow runs it on every PR that
+touches the hooks, the skills or the references.
 
 ## Versioning
 
