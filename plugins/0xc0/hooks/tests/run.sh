@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Runs every case in cases.jsonl through its hook and compares the exit code:
-# 2 is blocked, 0 is allowed. Usage: plugins/0xc0/hooks/tests/run.sh
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 n=0; failed=0
@@ -20,6 +18,5 @@ echo "$((n - failed))/$n cases pass"
 # board.sh prints instead of blocking: its own cases, from a fixture.
 bash "$here/board.sh" || failed=$((failed + 1))
 bash "$here/worktree.sh" || failed=$((failed + 1))
-# Not a hook: the skills' commands, as a session gets them.
 bash "$here/skills.sh" || failed=$((failed + 1))
 [ "$failed" -eq 0 ]

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Protects the state and keeps secrets out of the repos: they live in Vault.
+# The rule: the workspace's CLAUDE.md, Rules that apply in every repo.
 set -uo pipefail
 
 path="$(jq -r '.tool_input.file_path // ""')"

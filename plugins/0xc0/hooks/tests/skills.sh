@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
-# Every SKILL.md of the plugin reaches a session as written. Claude Code
-# replaces a bare $1, $2… in a skill with words of its arguments, so a
-# snippet braces them, "${1}", or names them. A session's shell can be zsh,
-# where arrays start at 1 and mapfile does not exist, so no snippet uses an
-# array. In a worktree, Claude Code refuses a command that runs git inside
-# $(…) (#54), so no snippet does. A reference a skill links to is read, not
-# expanded, but its snippets run in the same shell, so it gets the same
-# check. Run by run.sh:
-# first on a sample, whose marked lines must be caught and no other, then on
-# every skill and reference.
+# Why each pattern would not survive in a session: the README, Skills.
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 n=0; failed=0
 
-# A bare positional parameter; an array: indexed, assigned or read into; or
-# git inside $(…).
 bad='\$[0-9]|\$\{#?[A-Za-z_][A-Za-z0-9_]*\[|[A-Za-z_][A-Za-z0-9_]*\+?=\(|mapfile|readarray|(declare|local|typeset|read) -[A-Za-z]*[aA]|\$\(([^)]*[^A-Za-z0-9_.-])?git[[:space:]]'
 fail() { failed=$((failed + 1)); echo "FAIL [$1] $2"; }
 lines() { tr '\n' ' ' | sed 's/ $//'; }
