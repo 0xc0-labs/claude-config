@@ -6,15 +6,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PLUGIN_ROOT/hooks/no-apply.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/no-apply.sh\""
           },
           {
             "type": "command",
-            "command": "$CLAUDE_PLUGIN_ROOT/hooks/commit-msg.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/commit-msg.sh\""
           },
           {
             "type": "command",
-            "command": "$CLAUDE_PLUGIN_ROOT/hooks/branch-name.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/branch-name.sh\""
           }
         ]
       },
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PLUGIN_ROOT/hooks/guard-files.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/guard-files.sh\""
           }
         ]
       }
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PLUGIN_ROOT/hooks/board.sh"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/board.sh\""
           }
         ]
       }
