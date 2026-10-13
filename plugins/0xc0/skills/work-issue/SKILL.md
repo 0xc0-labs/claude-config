@@ -131,7 +131,8 @@ gh api graphql -F repo='{repo}' -f query='query($repo: String!) {
   why and stops (step 7).
 - **None named**: the first Ready one.
 
-- **Nothing Ready**: say so in one line and stop. The orchestrator messages
+- **Nothing Ready**: say so in one line and stop (an issue named and not
+  Ready is reported on that issue, step 6). The orchestrator messages
   this session when something turns Ready. Never take a Todo issue: Todo is
   not a complete contract, or it waits on another repo.
 
@@ -345,9 +346,31 @@ and marks it ready (`orchestrate`, step 6).
 
 ## 6. Report
 
-To the orchestrator: `SendMessage` to the session named `orchestrator`
-(`ListAgents` shows it). When none is open, to the operator, here. Always this
-shape:
+Two copies, in this order, always this shape. The autopilot closes the tab
+on the last line, so a report only in the session's output is lost: the
+first copy is the durable one.
+
+1. **On the issue**, written to a file (Text for GitHub, below) and posted
+   as a comment, where the orchestrator and the operator read it later:
+
+   ```sh
+   gh issue comment <n> --body-file <scratch>/report.md
+   ```
+
+2. **To the orchestrator.** `SendMessage` and `ListAgents` are deferred
+   tools: load them first with `ToolSearch` (`select:ListAgents,SendMessage`),
+   or the call fails. `ListAgents` shows the session named `orchestrator`;
+   `SendMessage` sends it the same report. When none is open, the comment
+   is the report.
+
+If the comment or the message fails, the session says so, tries once more,
+and goes on to step 7 and its last line all the same. A session opened by
+hand may also print the report; one started as `<repo>#<n>` never leaves it
+only in its output.
+
+Every stop does this, not only a finished PR: step 1's "Nothing Ready" when
+the session holds an issue, step 3's question, step 4's `Needs:` and each
+stop at step 7, so a stopped session explains itself on its issue too.
 
 ```
 <repo>#<n> <title>
