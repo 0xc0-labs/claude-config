@@ -250,6 +250,14 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   its own issue; and the Never list.
   Where gentle-ai's instructions and these differ, these win.
 
+  **ODD first, for a Feature.** When the issue's type is Feature, the
+  branch's first commit adds gentle-ai's feature document,
+  `odd/tasks/<feature>.md`, and nothing else, as `docs(odd): plan
+  <feature>`. The session writes it after the exploration and before any
+  other file changes, as gentle-ai's ODD protocol says ("before the first
+  source write"): a document written afterwards is worth nothing. A Task or
+  Bug is unaffected: gentle-ai leaves small, understood work without one.
+
   When gentle-ai's review asks the operator's consent (its START returns
   the `gentle-ai.review-integration.consent/v3` envelope,
   `consent_required`), who answers depends on how the session started:
@@ -292,6 +300,16 @@ its PR ready when all of these hold:
   `gentle-ai.review-acknowledged/v1` envelope printed. One declined,
   unavailable, or still waiting on consent or on a correction does not
   count;
+- in such a repo, for a Feature, the branch's first commit adds only
+  `odd/tasks/*.md`:
+
+  ```sh
+  git log --reverse --format=%H origin/main..HEAD
+  git show --name-only --format= <first sha>
+  ```
+
+  A branch that fails it stays a draft, and the report says why under Not
+  done. The session does not rewrite history to pass;
 - nothing in the issue is left undone: every acceptance criterion met, no
   question open on it, and no `.claude/` patch left to the operator
   (step 4), since without it the PR cannot be merged as it is;
