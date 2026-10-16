@@ -208,6 +208,15 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
     and reviews (`gh pr view <branch> --json comments,reviews`) count with
     the issue's. A local branch that diverged from origin: report and stop
     (step 7).
+  - **Bringing `main` in** (a conflict, a sibling that merged first, a
+    migration to regenerate): `git fetch origin`, then `git merge
+    origin/main`, and the conflicts are resolved in the merge commit. Never
+    `git rebase` a branch that is on origin, and never `git push --force`
+    or `--force-with-lease`: the PR is squash-merged, so its history does
+    not matter, and a session's permissions refuse the force push. A
+    regenerated generated file (a Payload migration and its snapshot,
+    types) goes in a commit of its own after the merge, as the generated
+    files already do.
   - **Not on origin**: `git switch -c <branch> origin/main`.
 - Up to a **draft** PR. Its title is a Conventional Commit for the change
   this PR makes, not the issue's title: the issue says what must be true, the
@@ -288,7 +297,10 @@ few seconds: `gh pr checks <pr> --watch --interval 60`. Right after a push,
 GitHub may not have registered them yet: `no checks reported` is no result,
 and the watch starts again a minute later. A failure within the issue's
 scope gets fixed, and the checks are watched again; one outside it is
-reported.
+reported. A fix that asks to regenerate a file, or a PR that waited on a
+sibling, brings `main` in with `git merge origin/main`, the regenerated
+file in a commit of its own after it: never a rebase, never a force push
+(step 4).
 
 A draft is work in progress; a ready PR can be merged (workspace#119).
 Once the checks have finished, and before the report, the session marks
