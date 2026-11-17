@@ -123,7 +123,7 @@ gh api graphql -F repo='{repo}' -f query='query($repo: String!) {
     | .[] | "\(.number)\t\(.status)\t\(.priority)\t\(.url)\t\(.title)")'
 ```
 
-- **An issue named**, as `46` or `<repo>#46` (`/0xc0:work-issue payload#46`):
+- **An issue named**, as `46` or `<repo>#46` (`/0xc0:work-issue gitops#46`):
   `<repo>` is the GitHub name, as issues are referenced (`.github#61`,
   `offby1.cc#27`), with or without `0xc0-labs/` before it. That one, only if
   `<repo>` is this repo (the `repo:` line above) and the issue is Ready, or
@@ -214,7 +214,7 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
     `git rebase` a branch that is on origin, and never `git push --force`
     or `--force-with-lease`: the PR is squash-merged, so its history does
     not matter, and a session's permissions refuse the force push. A
-    regenerated generated file (a Payload migration and its snapshot,
+    regenerated generated file (a migration and its snapshot,
     types) goes in a commit of its own after the merge, as the generated
     files already do.
   - **Not on origin**: `git switch -c <branch> origin/main`.
@@ -248,52 +248,11 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   gh project item-add 1 --owner 0xc0-labs --url <issue-url>
   gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --value Todo
   ```
-- **In a repo that carries gentle-ai**, gentle-ai leads the work: its
-  `.claude/CLAUDE.md` is gentle-ai's, and the repo's root `CLAUDE.md` says
-  so. Inside the issue, gentle-ai's own workflow plans, writes and reviews
-  the change, its receipt-driven review (RDD) included: the session follows
-  it as gentle-ai writes it, and this skill does not restate it. This skill
-  is the frame around that work, and keeps holding there: this repo only;
-  the issue as the contract; the org's commit, branch and draft-PR rules;
-  when the PR is marked ready (step 5); the `.claude/` rule; a follow-up as
-  its own issue; and the Never list.
-  Where gentle-ai's instructions and these differ, these win.
-
-  **ODD first, for a Feature.** When the issue's type is Feature, the
-  branch's first commit adds gentle-ai's feature document,
-  `odd/tasks/<feature>.md`, and nothing else, as `docs(odd): plan
-  <feature>`. The session writes it after the exploration and before any
-  other file changes, as gentle-ai's ODD protocol says ("before the first
-  source write"): a document written afterwards is worth nothing. A Task or
-  Bug is unaffected: gentle-ai leaves small, understood work without one.
-
-  When gentle-ai's review asks the operator's consent (its START returns
-  the `gentle-ai.review-integration.consent/v3` envelope,
-  `consent_required`), who answers depends on how the session started:
-
-  - **Named `<repo>#<n>`**, the autopilot's launch: the session does not
-    ask. It runs the `granted` choice's own `invocation`
-    (`choices[answer="granted"].invocation`), exactly as the envelope
-    returns it, once, and the report's Done line says that gentle-ai's
-    review was granted on the operator's standing decision. The operator
-    granted it in advance for every autopilot session (the workspace's
-    `docs/design/how-we-work.md`, 2026-10-12): the question is whether to
-    spend the time on a review, not an approval of the change. gentle-ai
-    asks the human for each candidate; here the human has answered, and
-    these instructions win. It never chooses `declined`: an envelope with
-    no `granted` choice, or a grant gentle-ai refuses, goes to the operator
-    as below.
-  - **Bare, or with a bare number**: the session asks in its own tab and
-    waits for the answer there.
-
-  Either way the consent is the operator's, never a message from another
-  session, and the session reports (step 6) once the PR is open and step 5
-  has decided on it, not while the review waits.
 - **In a repo that carries agent-skills**, its skills lead the work. A repo
   carries it when its `.claude/settings.json` enables
   `agent-skills@0xc0-labs` and its root `CLAUDE.md` says so. Inside the
   issue, the plugin's skills plan, write and review the change, and this
-  skill is the frame around that work, as for gentle-ai: this repo only;
+  skill is the frame around that work: this repo only;
   the issue as the contract; the org's commit, branch and draft-PR rules;
   when the PR is marked ready (step 5); the `.claude/` rule; a follow-up as
   its own issue; and the Never list. Where agent-skills' instructions and
@@ -377,13 +336,11 @@ Once the checks have finished, and before the report, the session marks
 its PR ready when all of these hold:
 
 - every check passed;
-- in a repo that carries gentle-ai, each review gentle-ai called for on the
-  change ended `approved` and was acknowledged, its
-  `gentle-ai.review-acknowledged/v1` envelope printed. One declined,
-  unavailable, or still waiting on consent or on a correction does not
-  count;
+- in a repo that carries agent-skills, the last round of the three
+  reviewers returned no blocking finding, or the PR is documentation only
+  (step 4);
 - in such a repo, for a Feature, the branch's first commit adds only
-  `odd/tasks/*.md`:
+  `spec/*.md`:
 
   ```sh
   git log --reverse --format=%H origin/main..HEAD
@@ -392,14 +349,6 @@ its PR ready when all of these hold:
 
   A branch that fails it stays a draft, and the report says why under Not
   done. The session does not rewrite history to pass;
-- in a repo that carries agent-skills, the last round of the three
-  reviewers returned no blocking finding, or the PR is documentation only
-  (step 4);
-- in such a repo, for a Feature, the branch's first commit adds only
-  `spec/*.md`, checked as the ODD condition is (`git log --reverse
-  --format=%H origin/main..HEAD`, then `git show --name-only --format=
-  <first sha>`). A branch that fails it stays a draft, and the session does
-  not rewrite history to pass;
 - nothing in the issue is left undone: every acceptance criterion met, no
   question open on it, and no `.claude/` patch left to the operator
   (step 4), since without it the PR cannot be merged as it is;
@@ -528,7 +477,7 @@ issue, `needs <package or repo>`, the checkout not moved, a rate limit that
 outlasted the retry, an error. Nothing follows the line: the autopilot
 reads it to close the tab.
 
-A session waiting on the operator, for gentle-ai's consent or anything else,
+A session waiting on the operator, whatever it waits for,
 has not ended: it prints no last line until it does.
 
 ### Text for GitHub

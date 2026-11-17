@@ -147,7 +147,7 @@ gh project item-edit 1 --owner 0xc0-labs --url <issue-url> --field Status --valu
 
 **A repo**: once its issues are Ready, the orchestrator starts its
 autopilot, from the workspace's root, with the repo's directory as the
-workspace's `CLAUDE.md` lists it (`payload`, `offby1.cc`, `.github`;
+workspace's `CLAUDE.md` lists it (`gitops`, `offby1.cc`, `.github`;
 workspace#107):
 
 ```sh
