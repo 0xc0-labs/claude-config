@@ -1,51 +1,7 @@
 # Examples
 
-Implementation sketches for `SKILL.md`. TypeScript runs in a Next.js Route
-Handler or a Payload custom endpoint alike: both take a Web `Request` and
-return a `Response`.
-
-## Cursor pagination (keyset)
-
-The cursor encodes the last item's sort key and id, so the next page is
-"after this row" and stays stable under inserts. Clients treat it as opaque
-[Zalando 160]; signing or encrypting it is optional (no standard decides).
-
-```ts
-type Cursor = { createdAt: string; id: string };
-
-const encode = (c: Cursor) => Buffer.from(JSON.stringify(c)).toString("base64url");
-const decode = (s: string): Cursor | null => {
-  try {
-    return JSON.parse(Buffer.from(s, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
-};
-
-export async function listBookings(req: Request, repo: BookingQueries): Promise<Response> {
-  const url = new URL(req.url);
-  const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
-  const raw = url.searchParams.get("cursor");
-  const after = raw ? decode(raw) : null;
-  if (raw && !after) return problemJson(400, "invalid-cursor", "The cursor is not valid.");
-
-  // One extra row tells whether a next page exists without a count query.
-  const rows = await repo.list({ after, limit: limit + 1, status: url.searchParams.get("status") });
-  const items = rows.slice(0, limit);
-  const last = items.at(-1);
-
-  const body: { items: typeof items; next?: string } = { items };
-  if (rows.length > limit && last) {
-    const next = new URL(url);
-    next.searchParams.set("cursor", encode({ createdAt: last.createdAt, id: last.id }));
-    body.next = next.toString();
-  }
-  return Response.json(body);
-}
-```
-
-The query behind `repo.list` orders by `(createdAt, id)` and filters
-`(createdAt, id) > (after.createdAt, after.id)`; the `id` breaks ties.
+Implementation sketches for `SKILL.md`. They use the Fetch API's `Request`
+and `Response`, which most web frameworks' handlers take and return.
 
 ## Idempotency-Key
 
@@ -152,7 +108,7 @@ is what Microsoft prefers over a version counter [Microsoft]. The read and
 the write in `patchSession` must be atomic with the update (a version
 column in the `where` of the update), or two writers can both pass the check.
 
-## Problem helper for a Route Handler
+## Problem helper
 
 ```ts
 export function problemJson(status: number, type: string, title: string, extra: object = {}): Response {

@@ -1,6 +1,6 @@
 ---
 name: hexagonal-architecture
-description: Ports and adapters for application code — the dependency rule, where Next.js and Payload sit (at the edge, behind adapters), testing through the ports, a folder layout that names the domain, and when not to use it at all. Use when a session designs, structures or reviews TypeScript application code that holds business rules, in a Next.js front or the Payload backend, or decides whether a repo needs that structure.
+description: Ports and adapters for application code — the dependency rule, where frameworks and data stores sit (at the edge, behind adapters), testing through the ports, a folder layout that names the domain, and when not to use it at all. Use when a session designs, structures or reviews application code that holds business rules, or decides whether a codebase needs that structure.
 ---
 
 # Hexagonal architecture (ports and adapters)
@@ -15,30 +15,30 @@ called or where data lives. Everything outside talks to them through a
 
 | The repo is | Use it? |
 |---|---|
-| A landing page or a content site: pages render what Payload returns, no rule beyond "show it" | **No.** Fetch in the Server Component, type the response, stop. There is no inside to protect. |
-| Payload collections with access control, hooks and validation only | **No.** Payload's config *is* the application; wrapping it adds a layer with nothing in it. |
+| A site that renders what a CMS or an API returns: no rule beyond "show it" | **No.** Fetch where the page renders, type the response, stop. There is no inside to protect. |
+| A CMS's or a framework's configuration (access control, hooks, validation) that is the whole application | **No.** The configuration *is* the application; wrapping it adds a layer with nothing in it. |
 | Rules that must hold whatever the caller: prices, availability, quotas, a state machine, a calculation | **Yes**, for that part only. |
 | A rule that a second caller (a cron, a webhook, a CLI, a test) will need too | **Yes**: being driven alike by users, programs, tests and scripts is the pattern's stated intent [Cockburn 2005]. |
 
 No source sets a size threshold; this table is a judgment. Cockburn's stated
 goal is an application that runs and is tested without its UI or its database
 [Cockburn 2005]; if that would give you nothing, do not pay for it. Mixing is
-fine: one folder of the repo hexagonal, the rest plain Next.js.
+fine: one folder of the repo hexagonal, the rest plain framework code.
 
 ## The parts
 
 - **Application (inside):** use cases and the domain model. Plain TypeScript:
-  no `next/*`, no `payload`, no `fetch`, no `process.env`.
+  no framework or SDK import, no `fetch`, no `process.env`.
 - **Driving port:** what the outside can ask the application to do — the use
   case's input type and function signature. Called *primary* in the 2005
   article [Cockburn 2005].
 - **Driven port:** what the application needs from the outside — an
   interface it declares and something else implements: a repository, a
   clock, a mailer, a payment gateway. *Secondary* in [Cockburn 2005].
-- **Driving adapter:** turns a technology's call into a port call: a Next.js
-  Route Handler, a Server Action, a Payload custom endpoint or hook, a test.
-- **Driven adapter:** implements a driven port with a technology: Payload's
-  Local API, `fetch` to a third party, an in-memory fake.
+- **Driving adapter:** turns a technology's call into a port call: an HTTP
+  handler, a form action, a CMS hook or endpoint, a scheduled job, a test.
+- **Driven adapter:** implements a driven port with a technology: a database
+  client, a CMS's in-process API, `fetch` to a third party, an in-memory fake.
 - **Composition root:** the one place that picks the adapters and hands them
   to the use cases. Martin calls it the Main component, the dirtiest one
   [Martin 2017, ch. 26]; Cockburn calls the pattern configurable dependency
@@ -56,25 +56,26 @@ mailer); the dependency is inverted by the port, an interface the inside owns
 and the outside implements [Martin 2017, ch. 11 and 22].
 
 Data crossing a boundary is a plain structure shaped for the inside, never a
-framework object or a database row [Martin 2017, ch. 22]. A Payload document
-type generated in `payload-types.ts` is the outside's shape: map it in the
-adapter.
+framework object or a database row [Martin 2017, ch. 22]. A type that a
+framework or a CMS generates from its schema is the outside's shape: map it in
+the adapter.
 
 ## Where the framework sits
 
 Frameworks, the web and the database are details at the edge [Martin 2017,
 ch. 30–32].
 
-- **Next.js** is a driving adapter. A Route Handler or Server Action parses
-  the request, calls one use case, maps the result to a response. Nothing
-  else. `cookies()`, `headers()`, `redirect()`, `revalidateTag()` stay there.
-- **Payload** is two things. As a backend, its Local API (`payload.find`,
-  `payload.create`) is a **driven** adapter behind a repository port. Its
-  collection hooks and custom endpoints are **driving** adapters that call
-  use cases. A rule that must hold however the data is written — admin UI,
-  REST, Local API — is enforced where all of them pass: a Payload hook or
-  `validate` calling the domain function, not only the Next.js handler.
-- **Tenant.** Payload serves several fronts (multi-tenant). The tenant is an
+- **A web framework** is a driving adapter. A handler or action parses the
+  request, calls one use case, maps the result to a response. Nothing else.
+  Its request-scoped helpers (cookies, headers, redirects, cache
+  invalidation) stay there.
+- **A CMS or backend framework** is two things. Its in-process data API is a
+  **driven** adapter behind a repository port. Its hooks and custom endpoints
+  are **driving** adapters that call use cases. A rule that must hold however
+  the data is written (an admin UI, a generated API, an in-process call) is
+  enforced where all of them pass: a write hook or validator calling the
+  domain function, not only one HTTP handler.
+- **Tenant.** Where one backend serves several tenants, the tenant is an
   explicit argument of every port method that reads or writes tenant data,
   never ambient state the inside reaches for (org convention; no source
   decides this).
@@ -82,20 +83,20 @@ ch. 30–32].
 ## Folder layout: let it scream
 
 The top level names what the system does, not the framework it uses
-[Martin 2011; Martin 2017, ch. 21]. Next.js fixes `app/` for routing; keep it
-thin and put the rest beside it.
+[Martin 2011; Martin 2017, ch. 21]. Where a framework fixes a folder for
+routes, keep it thin and put the rest beside it.
 
 ```text
 src/
-  app/                      # Next.js routes: driving adapters only
-    api/bookings/route.ts
+  routes/                   # the framework's fixed routing folder: driving adapters only
+    bookings.ts
   bookings/                 # one capability = one folder
     domain/                 # entities, value objects, rules; no imports from outside src/bookings
     application/            # use cases + the ports they declare
       book-session.ts
       ports.ts
     adapters/
-      payload-booking-repository.ts
+      sql-booking-repository.ts
       in-memory-booking-repository.ts
   composition.ts            # composition root: wires adapters to use cases
 ```
@@ -125,38 +126,37 @@ export function makeBookSession(deps: { bookings: BookingRepository; clock: Cloc
 }
 ```
 
-The full example — Payload adapter, Route Handler, composition root and
+The full example — a store adapter, an HTTP handler, composition root and
 tests — is in [references/example.md](references/example.md).
 
 ## Testing through the ports
 
 - Test use cases by calling the driving port with in-memory driven adapters.
-  No Next.js server, no database, no Payload instance [Cockburn 2005;
-  Martin 2011].
+  No web server, no database [Cockburn 2005; Martin 2011].
 - Each driven adapter gets its own integration test against the real
-  technology (a Payload instance with a test database), checking it honours
+  technology (the real store with a test database), checking it honours
   the port's contract. Run the same contract suite against the fake and the
   real adapter, so the fake cannot drift (org convention; no source decides
   this).
 - Tests belong to the system and must not depend on its volatile parts, such
-  as the UI [Martin 2017, ch. 28]. A use-case test that needs `next/headers`
-  means a rule leaked into the adapter.
+  as the UI [Martin 2017, ch. 28]. A use-case test that needs a web
+  framework's request object means a rule leaked into the adapter.
 
 ## Anti-patterns
 
-- **The port mirrors the tool.** `PayloadPort.find(collection, where)` is
-  Payload with a new name. A port speaks the application's language:
+- **The port mirrors the tool.** `StorePort.find(collection, where)` is the
+  store's API with a new name. A port speaks the application's language:
   `bookings.countForSlot(...)`.
-- **A use case imports a framework.** `import { getPayload } from "payload"`
-  or `import { cookies } from "next/headers"` under `application/` or
-  `domain/`. Lint it: `no-restricted-imports` per folder.
-- **Framework types inward.** A use case taking `NextRequest` or returning a
-  Payload document type.
-- **Logic in the adapter.** A Route Handler that checks capacity before
+- **A use case imports a framework.** An import of a web framework, a CMS
+  SDK or a request helper under `application/` or `domain/`. Lint it: a rule
+  per folder that forbids those imports.
+- **Framework types inward.** A use case taking a framework's request type or
+  returning a CMS's document type.
+- **Logic in the adapter.** An HTTP handler that checks capacity before
   calling the use case: the rule is now skipped by every other driver.
 - **Hexagon for nothing.** Ports, adapters and a composition root around a
-  page that renders a Payload global. See "Decide first".
-- **Wiring everywhere.** `new PayloadBookingRepository()` inside a use case
+  page that renders what a CMS returns. See "Decide first".
+- **Wiring everywhere.** `new SqlBookingRepository()` inside a use case
   or a component; only the composition root constructs adapters.
 - **One port per table.** Ports follow what a use case needs, not the
   schema.
@@ -164,13 +164,13 @@ tests — is in [references/example.md](references/example.md).
 ## Review checklist
 
 - [ ] The decision table says this code has an inside worth protecting.
-- [ ] Nothing under `domain/` or `application/` imports `next`, `payload`,
-      `react`, an ORM, or reads `process.env`.
+- [ ] Nothing under `domain/` or `application/` imports a framework, a CMS or
+      database SDK or a UI library, or reads `process.env`.
 - [ ] Every driven port is an interface declared by the application.
-- [ ] Route Handlers, Server Actions, Payload hooks and endpoints parse, call
-      one use case, map the result; no business rule.
+- [ ] HTTP handlers, form actions, CMS hooks and endpoints parse, call one use
+      case, map the result; no business rule.
 - [ ] A rule that must hold for every writer is enforced where every writer
-      passes (a Payload hook calling the domain), not only in one front.
+      passes (a write hook calling the domain), not only in one front.
 - [ ] Tenant is an explicit parameter wherever tenant data is touched.
 - [ ] Use cases are tested with in-memory adapters; each real adapter has a
       contract test.

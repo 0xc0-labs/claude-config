@@ -100,8 +100,9 @@ Three skills a session loads when it designs or reviews application code:
 `hexagonal-architecture`, `domain-driven-design` and `rest-api-design`.
 Each is written from scratch and cites its primary sources (books, RFCs,
 the OpenAPI specification, public API guidelines) by name and version.
-The application repos enable it (the Next.js and Payload ones); the
-infrastructure repos do not load it. The text was drafted with Opus
+`packages` and the application repos enable it; the infrastructure repos do
+not load it. Its skills name no framework, CMS or vendor: a rule that holds
+for one framework alone belongs in the repo that uses it. The text was drafted with Opus
 (workspace#151). Enable it as `0xc0` is, with
 `"software-architecture@0xc0-labs": true` in `enabledPlugins`, and install it
 with `claude plugin install software-architecture@0xc0-labs --scope project`.

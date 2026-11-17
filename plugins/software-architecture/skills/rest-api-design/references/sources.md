@@ -1,6 +1,6 @@
 # Sources
 
-Every bracketed key in `SKILL.md`, `payload.md` and `examples.md` resolves
+Every bracketed key in `SKILL.md` and `examples.md` resolves
 here. Links were fetched on 2026-10-12. Where a point says "no standard
 decides this" or "org convention", none of these settles it.
 
@@ -18,18 +18,5 @@ decides this" or "org convention", none of these settles it.
 
 | Key | Source | What it backs |
 |---|---|---|
-| [Zalando NNN] | Zalando, "RESTful API and Event Guidelines", rule NNN (living document, no edition number). <https://opensource.zalando.com/restful-api-guidelines/> | 100, 101, 192 API first and OpenAPI; 113–115 versioning; 118 snake_case; 129 kebab-case; 134 plural; 137 query parameters; 138 no actions; 150, 220 status codes; 151 document responses; 160 cursor; 161, 248 page object; 176 problem JSON; 182 ETag; 230 Idempotency-Key |
-| [Microsoft] | Microsoft, "Microsoft Azure REST API Guidelines", `azure/Guidelines.md` on the `vNext` branch of microsoft/api-guidelines (latest change-history entry 2025-03-28). <https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md> | camelCase JSON; kebab-case paths; `api-version`; `value` + `nextLink`; JSON Merge Patch; conditional requests and hash ETags; `Repeatability-Request-ID` |
-
-## Payload (checked against the 3.x docs; latest stable v3.90.2)
-
-| Key | Source |
-|---|---|
-| [Payload REST] | REST API overview, incl. custom endpoints. <https://payloadcms.com/docs/rest-api/overview> |
-| [Payload queries] | Querying, `where` operators. <https://payloadcms.com/docs/queries/overview> |
-| [Payload sort] | Sort. <https://payloadcms.com/docs/queries/sort> |
-| [Payload pagination] | Pagination. <https://payloadcms.com/docs/queries/pagination> |
-| [Payload Local API] | Local API, `overrideAccess` default. <https://payloadcms.com/docs/local-api/overview> |
-| [Payload multi-tenant] | Multi-tenant plugin. <https://payloadcms.com/docs/plugins/multi-tenant> |
-| [Payload source] | Error body, `formatErrors` at tag v3.90.2. <https://raw.githubusercontent.com/payloadcms/payload/v3.90.2/packages/payload/src/utilities/formatErrors.ts> |
-| Release | v3.90.2, 2026-09-23. <https://github.com/payloadcms/payload/releases/latest> |
+| [Zalando NNN] | Zalando, "RESTful API and Event Guidelines", rule NNN (living document, no edition number). <https://opensource.zalando.com/restful-api-guidelines/> | 100, 101, 192 API first and OpenAPI; 113–115 versioning; 118 snake_case; 129 kebab-case; 134 plural; 138 no actions; 150, 220 status codes; 151 document responses; 176 problem JSON; 182 ETag; 230 Idempotency-Key |
+| [Microsoft] | Microsoft, "Microsoft Azure REST API Guidelines", `azure/Guidelines.md` on the `vNext` branch of microsoft/api-guidelines (latest change-history entry 2025-03-28). <https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md> | camelCase JSON; kebab-case paths; `api-version`; page shifting under concurrent writes; JSON Merge Patch; conditional requests and hash ETags; `Repeatability-Request-ID` |

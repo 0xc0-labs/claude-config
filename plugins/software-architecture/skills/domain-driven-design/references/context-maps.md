@@ -23,11 +23,11 @@ Vernon also discusses integrating contexts over REST and messaging
 
 Org convention; no source decides these:
 
-- **Payload → each Next.js front.** Payload is an Open Host Service over its
-  REST API. A front that only displays content conforms. A front with its
-  own vocabulary keeps a mapping module (its anticorruption layer) that
-  turns Payload documents into its own types; components never see
-  generated Payload types.
+- **A backend → each front that reads it.** A backend that publishes one API
+  for all its fronts is an Open Host Service. A front that only displays
+  content conforms. A front with its own vocabulary keeps a mapping module
+  (its anticorruption layer) that turns the backend's documents into its own
+  types; components never see the backend's generated types.
 - **Shared code across repos** is a versioned package in
   `0xc0-labs/packages` (workspace `CLAUDE.md`). A package that carries a
   domain model is a Shared Kernel: keep it small, change it by agreement,
@@ -43,9 +43,9 @@ A context map can be a Markdown table in the repo's `docs/`:
 ```text
 | Upstream | Downstream | Pattern | Contract |
 |---|---|---|---|
-| payload (content) | artistlabco.com | OHS + Published Language / Conformist | Payload REST, generated types |
-| payload (bookings) | artistlabco.com | OHS / ACL | openapi.yaml, bookings/mapping.ts |
-| stripe | payload (bookings) | ACL | payments/stripe-adapter.ts |
+| cms (content) | shop front | OHS + Published Language / Conformist | the CMS's REST API, generated types |
+| cms (bookings) | shop front | OHS / ACL | openapi.yaml, bookings/mapping.ts |
+| payment provider | cms (bookings) | ACL | payments/payment-adapter.ts |
 ```
 
 The rows above are illustrative, not the org's current map.

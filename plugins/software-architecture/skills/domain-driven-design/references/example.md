@@ -1,4 +1,4 @@
-# Worked example: a session aggregate stored in Payload
+# Worked example: a session aggregate in a SQL store
 
 A small bookings context for an artist's site. The operator's words are
 "session", "seat", "book", "cancel", "waitlist"; the code uses them. Names
@@ -124,7 +124,7 @@ The waitlist is a separate aggregate that reacts to `BookingCancelled`: it
 is not needed to keep any of the three invariants, so it stays outside
 [Vernon 2013, ch. 10].
 
-## Repository port and Payload adapter
+## Repository port and store adapter
 
 ```ts
 // bookings/domain/session-repository.ts
@@ -136,52 +136,49 @@ export interface SessionRepository {
 ```
 
 ```ts
-// bookings/adapters/payload-session-repository.ts
-import type { Payload } from "payload";
+// bookings/adapters/sql-session-repository.ts
+export interface SqlClient {
+  query<T>(text: string, params: readonly unknown[]): Promise<T[]>;
+}
 
-export class PayloadSessionRepository implements SessionRepository {
-  constructor(private readonly payload: Payload) {}
+type SessionRow = { capacity: number; attendees: string[] | null; cancelled: boolean; version: number };
+
+export class SqlSessionRepository implements SessionRepository {
+  constructor(private readonly db: SqlClient) {}
 
   async get(tenantId: TenantId, id: SessionId): Promise<Session | null> {
-    const { docs } = await this.payload.find({
-      collection: "sessions",
-      where: { and: [{ id: { equals: id } }, { tenant: { equals: tenantId } }] },
-      limit: 1,
-    });
-    const doc = docs.at(0);
-    if (!doc) return null;
+    const rows = await this.db.query<SessionRow>(
+      "SELECT capacity, attendees, cancelled, version FROM sessions WHERE id = $1 AND tenant_id = $2",
+      [id, tenantId],
+    );
+    const row = rows.at(0);
+    if (!row) return null;
     return Session.restore({
       id,
       tenantId,
-      capacity: Capacity.of(doc.capacity),
-      attendees: (doc.attendees ?? []).map((a) => a.email),
-      cancelled: Boolean(doc.cancelled),
-      version: doc.version ?? 0,
+      capacity: Capacity.of(row.capacity),
+      attendees: row.attendees ?? [],
+      cancelled: row.cancelled,
+      version: row.version,
     });
   }
 
   async save(session: Session): Promise<void> {
     const s = session.snapshot();
-    const { docs } = await this.payload.update({
-      collection: "sessions",
-      where: {
-        and: [{ id: { equals: s.id } }, { tenant: { equals: s.tenantId } }, { version: { equals: s.version } }],
-      },
-      data: {
-        capacity: s.capacity.seats,
-        attendees: s.attendees.map((email) => ({ email })),
-        cancelled: s.cancelled,
-        version: s.version + 1,
-      },
-    });
-    if (docs.length === 0) throw new ConcurrencyError(s.id);
+    const updated = await this.db.query<{ id: string }>(
+      `UPDATE sessions SET capacity = $4, attendees = $5, cancelled = $6, version = version + 1
+       WHERE id = $1 AND tenant_id = $2 AND version = $3 RETURNING id`,
+      [s.id, s.tenantId, s.version, s.capacity.seats, s.attendees, s.cancelled],
+    );
+    if (updated.length === 0) throw new ConcurrencyError(s.id);
   }
 }
 ```
 
-The `version` field gives optimistic concurrency: two requests that both read
-version 3 cannot both write. Whether a filtered update is atomic depends on
-the database adapter Payload runs on; confirm it for the adapter in use.
+The `version` column gives optimistic concurrency: two requests that both read
+version 3 cannot both write. A single conditional statement is atomic in a
+relational store; with another kind of store, confirm that the store in use
+makes the conditional write atomic.
 
 ## Application service
 
@@ -206,8 +203,6 @@ source in this skill's list prescribes that mechanism.
 ## Tests
 
 ```ts
-import { expect, it } from "vitest";
-
 it("never books past capacity", () => {
   const s = Session.schedule("s1" as SessionId, "t1" as TenantId, Capacity.of(1));
   s.book(Email.parse("a@x.io"));
@@ -222,4 +217,4 @@ it("emits one event per booking", () => {
 });
 ```
 
-Aggregate tests need no repository, no Payload and no Next.js.
+Aggregate tests need no repository, no database and no framework.

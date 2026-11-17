@@ -1,6 +1,6 @@
 ---
 name: rest-api-design
-description: Designing and reviewing HTTP APIs — resources and URIs, method semantics (safe, idempotent), status codes, errors as application/problem+json (RFC 9457), cursor pagination, filtering and sorting, versioning, Idempotency-Key for unsafe retries, ETags and conditional requests, OpenAPI 3.1 as the contract — and how a custom Payload endpoint follows it while Payload's own REST API decides the rest. Use when a session designs, implements or reviews an HTTP endpoint, a Next.js Route Handler, a Payload custom endpoint, or an OpenAPI document.
+description: Designing and reviewing HTTP APIs — resources and URIs, method semantics (safe, idempotent), status codes, errors as application/problem+json (RFC 9457), pagination, filtering and sorting, versioning, Idempotency-Key for unsafe retries, ETags and conditional requests, OpenAPI 3.1 as the contract — and how an endpoint we write follows it while an API a framework generates is consumed as it is. Use when a session designs, implements or reviews an HTTP endpoint or an OpenAPI document.
 ---
 
 # REST API design
@@ -10,25 +10,23 @@ conventions on top, and they sometimes disagree. Where they do, this skill
 says so and picks one. Where nothing decides, it says "no standard decides
 this". Source keys resolve in [references/sources.md](references/sources.md).
 
-## First: is it Payload's API or ours?
+## First: is the API generated, or ours?
 
-- **Payload's generated REST API** (`/api/<collection-slug>`, globals, auth)
-  is not ours to redesign. Its routes, `where`/`sort`/`limit`/`page`
-  parameters, page-number pagination and `{ "errors": [...] }` error body are
-  fixed by Payload. Consume it as it is: [references/payload.md](references/payload.md).
-- **A custom Payload endpoint or a Next.js Route Handler** is ours: it
-  follows everything below.
+- **A generated API** (a framework's or a CMS's routes per content type, its
+  query parameters, its pagination and its error body) is not ours to redesign.
+  Consume it as it is, by its own documentation. A client that calls both a
+  generated API and our own endpoints handles both error shapes, in one module.
+- **An endpoint we write** is ours: it follows everything below.
 
 ## Resources and URIs
 
 - Nouns, plural, kebab-case path segments: `/booking-requests/{id}`
-  [Zalando 134, 129; Microsoft: kebab-case preferred]. Payload already
-  requires kebab-case collection slugs [Payload REST].
+  [Zalando 134, 129; Microsoft: kebab-case preferred].
 - No verbs: an action is a resource, `POST /orders/{id}/cancellation`
   [Zalando 138]. Nest one level, for ownership: `/sessions/{id}/bookings`.
-- JSON property case: **camelCase**, to match Payload, TypeScript and
-  [Microsoft]. Zalando requires snake_case [Zalando 118]; the guidelines
-  disagree, and the org follows its stack.
+- JSON property case: **camelCase**, to match TypeScript and [Microsoft].
+  Zalando requires snake_case [Zalando 118]; the guidelines still disagree,
+  and the org follows its language.
 
 ## Methods
 
@@ -81,6 +79,10 @@ add extension members for machine-readable specifics [RFC 9457, 3.1–3.2].
 meant to be dereferenced [Zalando 176]; RFC 9457 warns against relative
 forms other than a full path [RFC 9457, 3.1.1].
 
+Other guides and skills show other error bodies, `{ "error": { "code":
+"...", "message": "..." } }` among the common ones. An endpoint of ours
+answers with this one whatever they show: it is the standard [RFC 9457].
+
 ```http
 HTTP/1.1 422 Unprocessable Content
 Content-Type: application/problem+json
@@ -102,20 +104,14 @@ internals in `detail` [RFC 9457, 4–5].
 
 ## Pagination, filtering, sorting
 
-- **Cursor, not offset** for lists that grow [Zalando 160]. The cursor is
-  opaque: clients never parse or build it [Zalando 137, 160].
-- Response page object [Zalando 248, 161]:
-  `{ "items": [...], "next": "<absolute URL with cursor>" }`, plus `prev`
-  when backward paging is supported. Omit `next` on the last page.
-  Microsoft's equivalent is `value` + `nextLink` [Microsoft]; the org uses
-  Zalando's names.
-- Query parameters [Zalando 137]: `limit`, `cursor`, `q`, `sort`,
-  `fields`. Sort syntax: comma-separated fields, `-` for descending, no
-  prefix or `+` for ascending — Payload's `sort=-createdAt` is the same form
-  [Payload sort]. Filters are named query parameters (`?status=open`); do
-  not invent a query language. No RFC decides any of this.
+No RFC decides how a list is paged, filtered or sorted, and the guidelines
+disagree. This skill sets no convention: an API uses one, the same on every
+list endpoint, and its OpenAPI document describes it.
+
+- Filters are named query parameters (`?status=open`); do not invent a query
+  language.
 - Document that items may shift between pages under concurrent writes
-  [Microsoft]. Code: [references/examples.md](references/examples.md).
+  [Microsoft].
 
 ## Versioning
 
@@ -139,11 +135,11 @@ an Internet-Draft, not an RFC, now expired [Idempotency draft]:
   with a fingerprint of the body [draft, 2.4]. Retry with the same key:
   return the stored response, success or error [draft, 2.6].
 - Missing key where documented as required: **400**. Same key, different
-  payload: **422**. Same key while the first is still in flight: **409**.
+  request body: **422**. Same key while the first is still in flight: **409**.
   Each with a problem details body [draft, 2.7].
 - Publish the expiry window [draft, 2.3, 2.5.2]; Zalando uses 24 hours
-  [Zalando 230]. Zalando answers a changed payload with 400, the draft with
-  422; follow the draft. Microsoft uses `Repeatability-Request-ID` instead
+  [Zalando 230]. Zalando answers a changed request body with 400, the draft
+  with 422; follow the draft. Microsoft uses `Repeatability-Request-ID` instead
   [Microsoft].
 
 ## ETags and conditional requests
@@ -168,34 +164,38 @@ an Internet-Draft, not an RFC, now expired [Idempotency draft]:
 - Where the file lives and how it is linted is per repo (no standard decides
   this). Example: [references/examples.md](references/examples.md).
 
-## A custom Payload endpoint
+## An endpoint inside a framework
 
-**Not authenticated by default**, no `req.data`, no CORS headers unless
-added [Payload REST]: check `req.user`, `await req.json()`, use
-`headersWithCors`. Example: [references/payload.md](references/payload.md).
+A custom endpoint may **not be authenticated** even where the generated routes
+are, and may get no parsed body and no CORS headers: check, for the framework in
+use, what a custom endpoint must do itself. A framework's in-process data API
+may skip the access control its HTTP API applies: pass it the caller and ask for
+the access rules explicitly.
 
 ## Anti-patterns
 
 - Verbs in paths; a `GET` that changes state; `POST` for everything.
 - `200` with `{ "success": false }`; a bare string as error body.
-- Offset pagination over a growing table; a cursor clients can decode.
+- Two list endpoints of one API that page or sort differently.
 - A version segment in the URL "just in case"; a retryable POST without
   an Idempotency-Key; an endpoint whose OpenAPI document is stale.
-- Redesigning Payload's generated endpoints instead of adding a custom one.
+- Redesigning a generated API instead of adding an endpoint of our own.
 
 ## Review checklist
 
 - [ ] Plural kebab-case nouns, no verbs, nesting at most one level.
 - [ ] Each method used per its semantics; status codes from the table.
 - [ ] Every error is `application/problem+json`; no internals leaked.
-- [ ] Lists: cursor, `limit`, `items` + `next`; filters as named params.
+- [ ] Lists: one pagination and sorting convention across the API, in its
+      OpenAPI document; filters as named params.
 - [ ] Retryable POST/PATCH accept `Idempotency-Key` with 400/409/422.
 - [ ] `ETag` on reads; `If-Match` → 412 where lost updates matter.
-- [ ] Custom Payload endpoint checks `req.user` and the tenant.
+- [ ] A custom endpoint inside a framework authenticates the caller and
+      checks the tenant itself.
 - [ ] OpenAPI 3.1.2 document updated in the same PR.
 
 ## Sources
 
 [references/sources.md](references/sources.md): RFC 9110, 9111, 9457;
 draft-ietf-httpapi-idempotency-key-header-07; OpenAPI 3.1.2; Zalando and
-Microsoft Azure guidelines; Payload 3.x docs (checked against v3.90.2).
+Microsoft Azure guidelines.
