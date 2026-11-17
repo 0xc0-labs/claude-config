@@ -5,10 +5,11 @@ Claude Code marketplace and plugin for the `0xc0-labs` organization.
 ```
 .claude-plugin/marketplace.json   the marketplace
 plugins/0xc0/                  the plugin
-plugins/software-architecture/ the architecture skills plugin
   skills/                         3 skills
   references/                     what more than one skill links to
   hooks/                          guardrails, commit and branch conventions, board loader
+plugins/software-architecture/ the architecture skills plugin
+agent-skills                   Addy Osmani's plugin, served from its own repo, pinned
 ```
 
 ## Installing
@@ -44,7 +45,7 @@ Then start a new session: plugins load at startup.
 |----------------|-----------------------------------------------------------|
 | `vault-secret` | where a secret goes in Vault, how it is granted, written and rotated |
 | `orchestrate`  | the workspace session: plans a change across repos, writes each repo's issue as its contract (parent and sub-issues, "blocked by", related issues), gates them to Ready, starts each repo's autopilot (again when a blocker closes), has a subagent in its own worktree make the workspace's own changes, files a session's `Needs:` as an issue its own is blocked by, weighs a shared package where code repeats across repos, reviews every ready PR (on a finding: a comment, back to draft, the issue Ready again), marks its own ready, marks ready a PR left a draft for another change once that change lands, checks the whole set |
-| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (in an application repo, around gentle-ai's own workflow), marks it ready once it can be merged (checks green, gentle-ai's review approved and acknowledged, nothing in the issue left, no `.claude/` patch for the operator, nothing it waits on still open) or says why it stays a draft, as where `gh pr ready` is denied, reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
+| `work-issue`   | a repo's session: back on an up-to-date `main` (in its own worktree, the fetched `origin/main`) unless its own PR is open, claims the issue named (`<n>` or `<repo>#<n>`) or this repo's Ready issue of highest priority, works it up to a draft PR (around `agent-skills`' skills and its three reviewers in a repo that enables it, or around gentle-ai's own workflow in one that carries it), marks it ready once it can be merged (checks green, the reviewers' last round clear or gentle-ai's review approved and acknowledged, nothing in the issue left, no `.claude/` patch for the operator, nothing it waits on still open) or says why it stays a draft, as where `gh pr ready` is denied, reports back in a fixed shape, takes the next; named as `<repo>#<n>`, as the autopilot does, works that one alone, grants gentle-ai's review without asking, and ends with a fixed last line |
 
 They live in the plugin, not in a single repo, because they apply in all of
 them: secrets show up everywhere, and every repo works the same way (the
@@ -105,6 +106,20 @@ infrastructure repos do not load it. The text was drafted with Opus
 `"software-architecture@0xc0-labs": true` in `enabledPlugins`, and install it
 with `claude plugin install software-architecture@0xc0-labs --scope project`.
 Its version lives in its own `plugin.json`, and a change under it bumps it.
+
+## The `agent-skills` plugin
+
+The marketplace also serves `agent-skills`, Addy Osmani's plugin
+(`addyosmani/agent-skills`, MIT), which is third-party and not in this
+tree. Its entry is a `url` source pinned by `ref` (the tag) and `sha` (that
+tag's commit), with no `version`: the plugin's own `plugin.json` sets it.
+The `url` form, with an `https://` address, because `claude plugin update`
+clones a `github` source over SSH and fails on a machine whose key is
+scoped to the org's tree. A repo enables it with
+`"agent-skills@0xc0-labs": true` in `enabledPlugins`; `work-issue` says how
+a session leads a change with it. Moving the pin changes `ref` and `sha`
+together, in one PR here, which reaches every repo through the
+marketplace's `autoUpdate`.
 
 ## Hooks
 
