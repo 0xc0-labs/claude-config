@@ -25,35 +25,35 @@ remove() {  # remove <worktree path>
 
 git init -q --bare -b main "$tmp/origin.git"
 mkdir -p "$tmp/ws" && touch "$tmp/ws/CLAUDE.md"
-git clone -q "$tmp/origin.git" "$tmp/ws/payload" 2>/dev/null
-git -C "$tmp/ws/payload" symbolic-ref HEAD refs/heads/main
-commit "$tmp/ws/payload" one && git -C "$tmp/ws/payload" push -q origin main
+git clone -q "$tmp/origin.git" "$tmp/ws/gitops" 2>/dev/null
+git -C "$tmp/ws/gitops" symbolic-ref HEAD refs/heads/main
+commit "$tmp/ws/gitops" one && git -C "$tmp/ws/gitops" push -q origin main
 # origin moves on after the clone: the worktree must start from it, fetched.
 git clone -q "$tmp/origin.git" "$tmp/other" && commit "$tmp/other" two && git -C "$tmp/other" push -q origin main
 want="$(git -C "$tmp/other" rev-parse HEAD)"
 
-wt="$tmp/ws/.worktrees/payload-99"
-create "$tmp/ws/payload" payload-99; code=$?
+wt="$tmp/ws/.worktrees/gitops-99"
+create "$tmp/ws/gitops" gitops-99; code=$?
 check create "exits 0 (stderr: $(head -1 "$tmp/err"))" test "$code" -eq 0
 check create "prints only the path, got '$(cat "$tmp/out")'" test "$(cat "$tmp/out")" = "$wt"
-check create "is a worktree of the repo" sh -c "git -C '$tmp/ws/payload' worktree list --porcelain | grep -qxF 'worktree $wt'"
+check create "is a worktree of the repo" sh -c "git -C '$tmp/ws/gitops' worktree list --porcelain | grep -qxF 'worktree $wt'"
 check create "HEAD detached" test -z "$(git -C "$wt" branch --show-current)"
 check create "HEAD at origin/main as fetched" test "$(git -C "$wt" rev-parse HEAD)" = "$want"
 
-mkdir -p "$tmp/ws/payload/src"
-create "$tmp/ws/payload/src" payload-98; code=$?
+mkdir -p "$tmp/ws/gitops/src"
+create "$tmp/ws/gitops/src" gitops-98; code=$?
 check subdir "exits 0 from a subdirectory" test "$code" -eq 0
-check subdir "lands in the workspace" test "$(cat "$tmp/out")" = "$tmp/ws/.worktrees/payload-98"
+check subdir "lands in the workspace" test "$(cat "$tmp/out")" = "$tmp/ws/.worktrees/gitops-98"
 
-git clone -q "$tmp/origin.git" "$tmp/loose/payload"
-create "$tmp/loose/payload" payload-97; code=$?
+git clone -q "$tmp/origin.git" "$tmp/loose/gitops"
+create "$tmp/loose/gitops" gitops-97; code=$?
 check refuse "exits non-zero outside a workspace" test "$code" -ne 0
 check refuse "prints no path outside a workspace" test ! -s "$tmp/out"
 check refuse "says why" grep -q 'workspace' "$tmp/err"
 check refuse "creates nothing outside a workspace" test ! -e "$tmp/loose/.worktrees"
 
-for bad in ../escape Payload-1 .hidden "a/b" ""; do
-  create "$tmp/ws/payload" "$bad"; code=$?
+for bad in ../escape Gitops-1 .hidden "a/b" ""; do
+  create "$tmp/ws/gitops" "$bad"; code=$?
   check name "refuses the name '$bad'" test "$code" -ne 0
 done
 check name "creates nothing for a refused name" test ! -e "$tmp/ws/escape"
@@ -62,19 +62,19 @@ git -C "$wt" switch -q -c feat/unpushed && commit "$wt" three
 remove "$wt"; code=$?
 check keep "exits 0 (stderr: $(head -1 "$tmp/err"))" test "$code" -eq 0
 check keep "the worktree is gone" test ! -e "$wt"
-check keep "git no longer lists it" sh -c "! git -C '$tmp/ws/payload' worktree list --porcelain | grep -qxF 'worktree $wt'"
-check keep "the unpushed branch stays" git -C "$tmp/ws/payload" rev-parse --verify -q refs/heads/feat/unpushed
+check keep "git no longer lists it" sh -c "! git -C '$tmp/ws/gitops' worktree list --porcelain | grep -qxF 'worktree $wt'"
+check keep "the unpushed branch stays" git -C "$tmp/ws/gitops" rev-parse --verify -q refs/heads/feat/unpushed
 
-wt2="$tmp/ws/.worktrees/payload-98"
+wt2="$tmp/ws/.worktrees/gitops-98"
 git -C "$wt2" switch -q -c feat/pushed && commit "$wt2" four && git -C "$wt2" push -q origin feat/pushed
 remove "$wt2"; code=$?
 check pushed "exits 0" test "$code" -eq 0
 check pushed "the worktree is gone" test ! -e "$wt2"
-check pushed "the pushed branch is deleted" sh -c "! git -C '$tmp/ws/payload' rev-parse --verify -q refs/heads/feat/pushed"
+check pushed "the pushed branch is deleted" sh -c "! git -C '$tmp/ws/gitops' rev-parse --verify -q refs/heads/feat/pushed"
 
-remove "$tmp/ws/payload"; code=$?
+remove "$tmp/ws/gitops"; code=$?
 check primary "exits non-zero on the primary clone" test "$code" -ne 0
-check primary "the primary clone stays" test -d "$tmp/ws/payload/.git"
+check primary "the primary clone stays" test -d "$tmp/ws/gitops/.git"
 
 echo "$((n - failed))/$n worktree cases pass"
 [ "$failed" -eq 0 ]
