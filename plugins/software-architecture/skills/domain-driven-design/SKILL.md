@@ -1,6 +1,6 @@
 ---
 name: domain-driven-design
-description: Domain-Driven Design for TypeScript application code — strategic (bounded contexts, ubiquitous language, context maps) and tactical (entities, value objects, aggregates and their invariants, domain events, repositories), how it maps onto Payload collections and Next.js fronts, and when it is overkill. Use when a session models business rules, splits a system into contexts, names domain concepts, designs or reviews an aggregate, or decides whether DDD is worth it for a repo.
+description: Domain-Driven Design for application code — strategic (bounded contexts, ubiquitous language, context maps) and tactical (entities, value objects, aggregates and their invariants, domain events, repositories), how the model relates to the store that keeps it, and when it is overkill. Use when a session models business rules, splits a system into contexts, names domain concepts, designs or reviews an aggregate, or decides whether DDD is worth it for a repo.
 ---
 
 # Domain-Driven Design
@@ -13,7 +13,7 @@ keys in brackets resolve in [references/sources.md](references/sources.md).
 
 | Situation | Do |
 |---|---|
-| Content site: pages, posts, media, menus edited in Payload | **No DDD.** Payload collections are the model. |
+| Content site: pages, posts, media, menus edited in a CMS | **No DDD.** The CMS's content types are the model. |
 | CRUD with validation and access rules | **No tactical DDD.** A shared vocabulary still helps. |
 | Rules that interact and must always hold (stock, bookings, pricing, entitlements, a workflow with states) | **Tactical DDD** for that part. |
 | Several teams, fronts or tenants where one word means different things | **Strategic DDD**: name the contexts and map them. |
@@ -40,15 +40,15 @@ ch. 3]. No source gives a size threshold; the table is a judgment.
 
 In this org (org convention; no source decides this):
 
-- Content (pages, media, navigation) is a generic subdomain: Payload solves
+- Content (pages, media, navigation) is a generic subdomain: a CMS solves
   it; do not model it.
 - A front's own business (an artist's bookings, a shop's orders) is its own
-  context, even when its data is stored through Payload.
+  context, even when its data is stored through a CMS.
 - The tenant is a boundary of data, not a bounded context: two tenants
   sharing the same rules share one model.
-- A Next.js front reading Payload's REST API is a downstream **conformist**
-  to Payload's model; put an **anticorruption layer** (a mapping module)
-  between them as soon as the front's own words differ from Payload's.
+- A front reading a backend's generated API is a downstream **conformist**
+  to the backend's model; put an **anticorruption layer** (a mapping module)
+  between them as soon as the front's own words differ from the backend's.
 
 ## Tactical design: the building blocks
 
@@ -119,7 +119,7 @@ export class Session {
 ```
 
 The invariant "never over capacity" lives in the method that could break it,
-so no caller can skip it. Fuller model, repository and mapping to Payload:
+so no caller can skip it. Fuller model, repository and mapping to a store:
 [references/example.md](references/example.md).
 
 ### Domain events
@@ -135,23 +135,23 @@ building block; Vernon does.
 
 One per aggregate root, with a collection-like interface in the domain's
 terms; the implementation is an adapter [Evans 2003, ch. 6; Vernon 2013,
-ch. 12]. Over Payload: the repository maps a Payload document to the
-aggregate and back, and is the only code that knows the collection's slug.
+ch. 12]. The repository maps a stored document or row to the aggregate and
+back, and is the only code that knows the collection's or table's name.
 See the `hexagonal-architecture` skill for ports and adapters.
 
-## Payload and Next.js specifics
+## The model and the store that keeps it
 
-These apply the sources above to this stack (org convention).
+These apply the sources above to the store behind the domain (org convention).
 
-- A Payload collection is a persistence and admin schema. It may store an
-  aggregate; it is not the aggregate. Its generated types stay in adapters.
+- A content type or a table is a persistence and admin schema, not the
+  aggregate it may store. Its generated types stay in adapters.
 - Enforce aggregate invariants where every write passes: the domain method,
-  called from a Payload hook so admin edits and REST writes obey it too.
+  called from a write hook so admin edits and API writes obey it too.
 - Events must reach other contexts only once the write has succeeded
   [Vernon 2013, ch. 8]. Pull them from the aggregate after the repository's
   save returns, not from a hook that may fire before the write is final
   (the mechanism is an org convention; no source decides it).
-- Fronts read for display; they do not need aggregates. Query Payload
+- Fronts read for display; they do not need aggregates. Query the store
   directly for read models.
 
 ## Anti-patterns
@@ -184,7 +184,7 @@ These apply the sources above to this stack (org convention).
 - [ ] Value objects are immutable and validated on creation.
 - [ ] Repositories exist only for aggregate roots and return whole
       aggregates.
-- [ ] No Payload or Next.js import under the domain folder.
+- [ ] No framework or CMS import under the domain folder.
 - [ ] Events are past tense, immutable, and dispatched after commit.
 
 ## Sources

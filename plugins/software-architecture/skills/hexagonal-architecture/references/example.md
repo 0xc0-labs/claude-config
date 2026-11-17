@@ -1,8 +1,9 @@
 # Worked example: booking a session
 
 One capability, end to end: the domain rule, the use case and its ports, a
-Payload driven adapter, a Next.js driving adapter, a Payload hook as a second
-driving adapter, the composition root, and the tests. Names are illustrative.
+driven adapter over a SQL store, an HTTP handler as the driving adapter, a
+write hook as a second driving adapter, the composition root, and the tests.
+Names are illustrative; every import is the example's own.
 
 ## Domain and use case (inside)
 
@@ -82,32 +83,30 @@ the adapter picks the mechanism.
 ## Driven adapters (outside)
 
 ```ts
-// src/bookings/adapters/payload-booking-repository.ts
-import type { Payload } from "payload";
+// src/bookings/adapters/sql-booking-repository.ts
 import type { BookingRepository } from "../application/ports";
 import type { Booking } from "../domain/booking";
 
-export class PayloadBookingRepository implements BookingRepository {
-  constructor(private readonly payload: Payload) {}
+export interface SqlClient {
+  query<T>(text: string, params: readonly unknown[]): Promise<T[]>;
+}
+
+export class SqlBookingRepository implements BookingRepository {
+  constructor(private readonly db: SqlClient) {}
 
   async countForSlot(tenantId: string, slotId: string): Promise<number> {
-    const { totalDocs } = await this.payload.count({
-      collection: "bookings",
-      where: { and: [{ tenant: { equals: tenantId } }, { slot: { equals: slotId } }] },
-    });
-    return totalDocs;
+    const rows = await this.db.query<{ count: number }>(
+      "SELECT count(*)::int AS count FROM bookings WHERE tenant_id = $1 AND slot_id = $2",
+      [tenantId, slotId],
+    );
+    return rows[0]?.count ?? 0;
   }
 
   async save(tenantId: string, booking: Booking): Promise<void> {
-    await this.payload.create({
-      collection: "bookings",
-      data: {
-        tenant: tenantId,
-        slot: booking.slotId,
-        email: booking.email,
-        bookedAt: booking.createdAt.toISOString(),
-      },
-    });
+    await this.db.query(
+      "INSERT INTO bookings (id, tenant_id, slot_id, email, booked_at) VALUES ($1, $2, $3, $4, $5)",
+      [booking.id, tenantId, booking.slotId, booking.email, booking.createdAt.toISOString()],
+    );
   }
 }
 ```
@@ -133,38 +132,36 @@ export class InMemoryBookingRepository implements BookingRepository {
 
 ```ts
 // src/composition.ts
-import { getPayload } from "payload";
-import config from "@payload-config";
-import { randomUUID } from "node:crypto";
 import { makeBookSession } from "./bookings/application/book-session";
-import { PayloadBookingRepository } from "./bookings/adapters/payload-booking-repository";
+import { SqlBookingRepository } from "./bookings/adapters/sql-booking-repository";
+import { db } from "./db";
 
-export async function bookSession() {
-  const payload = await getPayload({ config });
+export function bookSession() {
   return makeBookSession({
-    bookings: new PayloadBookingRepository(payload),
+    bookings: new SqlBookingRepository(db),
     clock: { now: () => new Date() },
-    ids: { next: () => randomUUID() },
+    ids: { next: () => crypto.randomUUID() },
   });
 }
 ```
 
 ## Driving adapters (outside)
 
-A Next.js Route Handler: parse, call, map. The tenant comes from whatever the
-front resolves it from (host, path); that resolution belongs to the adapter.
+An HTTP handler, a function `(request: Request) => Promise<Response>`: parse,
+call, map. The tenant comes from whatever the front resolves it from (host,
+path); that resolution belongs to the adapter.
 
 ```ts
-// src/app/api/bookings/route.ts
-import { bookSession } from "@/composition";
-import { InvalidBooking } from "@/bookings/domain/booking";
-import { resolveTenant } from "@/tenancy/resolve-tenant";
+// src/routes/bookings.ts
+import { bookSession } from "../composition";
+import { InvalidBooking } from "../bookings/domain/booking";
+import { resolveTenant } from "../tenancy/resolve-tenant";
 
-export async function POST(request: Request) {
+export async function postBooking(request: Request): Promise<Response> {
   const body = await request.json();
   const tenantId = await resolveTenant(request);
   try {
-    const result = await (await bookSession())({ ...body, tenantId });
+    const result = await bookSession()({ ...body, tenantId });
     if (!result.ok) return problem(409, "slot-full", "The slot is full.");
     return Response.json({ id: result.bookingId }, { status: 201 });
   } catch (err) {
@@ -181,16 +178,16 @@ function problem(status: number, type: string, detail: string) {
 }
 ```
 
-The error body follows the `rest-api-design` skill. A Payload
-`beforeValidate` hook on `bookings` that calls `Booking.create` is a second
-driving adapter: it makes the same rule hold for writes from the admin UI and
-Payload's REST API, which never pass through the Route Handler.
+The error body follows the `rest-api-design` skill. A write hook on the
+bookings store that calls `Booking.create` (or a scheduled job that imports
+bookings from a file) is a second driving adapter: it makes the same rule hold
+for writes from an admin UI or a generated API, which never pass through the
+HTTP handler.
 
 ## Tests
 
 ```ts
 // src/bookings/application/book-session.test.ts
-import { describe, expect, it } from "vitest";
 import { makeBookSession } from "./book-session";
 import { InMemoryBookingRepository } from "../adapters/in-memory-booking-repository";
 
@@ -219,4 +216,4 @@ describe("book session", () => {
 
 A contract suite — a function taking a factory of `BookingRepository` and
 running the same cases — runs once with `InMemoryBookingRepository` and once
-with `PayloadBookingRepository` against a test database.
+with `SqlBookingRepository` against a test database.
