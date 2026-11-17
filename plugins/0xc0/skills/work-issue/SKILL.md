@@ -289,6 +289,76 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   Either way the consent is the operator's, never a message from another
   session, and the session reports (step 6) once the PR is open and step 5
   has decided on it, not while the review waits.
+- **In a repo that carries agent-skills**, its skills lead the work. A repo
+  carries it when its `.claude/settings.json` enables
+  `agent-skills@0xc0-labs` and its root `CLAUDE.md` says so. Inside the
+  issue, the plugin's skills plan, write and review the change, and this
+  skill is the frame around that work, as for gentle-ai: this repo only;
+  the issue as the contract; the org's commit, branch and draft-PR rules;
+  when the PR is marked ready (step 5); the `.claude/` rule; a follow-up as
+  its own issue; and the Never list. Where agent-skills' instructions and
+  these differ, these win.
+
+  1. **Spec first, for a Feature.** When the issue's type is Feature, the
+     branch's first commit adds `spec/<feature>.md` and nothing else, as
+     `docs(spec): plan <feature>`. The session writes it after the
+     exploration and before any other file changes, with
+     `spec-driven-development` and `planning-and-task-breakdown`: the spec,
+     the plan and the task list in that one file. No `SPEC.md`, no
+     `tasks/plan.md`, no `tasks/todo.md`: those are the skills' defaults,
+     which yield to a project's convention, and this is it. Later commits
+     may update it, the task list as it gets done among them: only the
+     first commit is checked. A Task or a Bug needs no document.
+  2. **No stop for approval.** `spec-driven-development` stops after the
+     spec and asks the human to approve it. Here the issue is the approved
+     requirement, and the spec is reviewed with the PR: the session goes
+     on. A requirement the issue leaves open is a question in the issue
+     (step 3), not an assumption in the spec and not an interview:
+     `interview-me` and `idea-refine` are for a session the operator opened
+     by hand.
+  3. **Building.** `incremental-implementation` and
+     `test-driven-development`, and the plugin's other skills as their
+     descriptions call for them.
+  4. **Five skills yield to the org's rules**, and the repo's settings deny
+     them (`Skill(agent-skills:<skill>)`): `git-workflow-and-versioning`
+     (commits, branches and PRs are the workspace's `CLAUDE.md`),
+     `ci-cd-and-automation` (every workflow lives in `.github`: a
+     `Needs:`), `constraint-driven-development` (it interviews the operator
+     and writes a `CONSTRAINTS.md`), `documentation-and-adrs` (decisions
+     live in the workspace's design: reported, not written here as an ADR),
+     `shipping-and-launch` (release and promotion are the operator's).
+     "Skill execution blocked by permission rules" is the expected answer:
+     the session goes on by the org's rules and does not work around it.
+  5. **The plugin's commands** (`/spec`, `/plan`, `/build`, `/test`,
+     `/review`, `/ship`, `/code-simplify`, `/constraints`, `/webperf`) are
+     the operator's to type. A session does not run them.
+  6. **Review before ready.** Once the work is pushed and before step 5
+     marks the PR ready, the session starts the three reviewers in one
+     turn, so they run in parallel: `agent-skills:code-reviewer`,
+     `agent-skills:security-auditor` and `agent-skills:test-engineer`. Each
+     is given the issue's acceptance criteria and how to read the change
+     (`git diff origin/main...HEAD`), and is told to report in its own
+     format and to change no file. A blocking finding is:
+
+     | Reviewer | Blocking |
+     |---|---|
+     | `code-reviewer` | a finding it rates Critical or Required |
+     | `security-auditor` | a finding it rates Critical or High |
+     | `test-engineer` | a missing test it rates Critical or High, for behaviour this change adds or alters |
+
+     The session fixes what blocks, pushes, and runs the three again on the
+     new diff, until a round in which none returns a blocking finding. At
+     most three rounds. A blocking finding still open after them, or one
+     the session holds wrong, leaves the PR a draft, and the report says
+     which and why under Not done, for the orchestrator: the session
+     neither argues it away nor drops it. What does not block is fixed when
+     it is small and inside the issue's scope, and otherwise goes in the
+     report.
+  7. **Which PRs.** Every PR that changes more than documentation. When
+     every file the PR changes (`git diff --name-only origin/main...HEAD`)
+     matches `**/*.md`, `docs/**`, `.claude/**` or `LICENSE`, what
+     `.github`'s `changes` action already treats as no code, no reviewer
+     runs and the report says so.
 
 ## 5. Check, then ready
 
@@ -322,6 +392,14 @@ its PR ready when all of these hold:
 
   A branch that fails it stays a draft, and the report says why under Not
   done. The session does not rewrite history to pass;
+- in a repo that carries agent-skills, the last round of the three
+  reviewers returned no blocking finding, or the PR is documentation only
+  (step 4);
+- in such a repo, for a Feature, the branch's first commit adds only
+  `spec/*.md`, checked as the ODD condition is (`git log --reverse
+  --format=%H origin/main..HEAD`, then `git show --name-only --format=
+  <first sha>`). A branch that fails it stays a draft, and the session does
+  not rewrite history to pass;
 - nothing in the issue is left undone: every acceptance criterion met, no
   question open on it, and no `.claude/` patch left to the operator
   (step 4), since without it the PR cannot be merged as it is;
@@ -412,6 +490,12 @@ Needs: <repo or @0xc0-labs/<package>>: <the change, precisely>
 Shared code: <what> also in <repo>/<path>
 Questions: <for the orchestrator or the operator, or none>
 ```
+
+In a repo that carries agent-skills, the `Done:` line ends with the
+reviews, in one form: `Reviews: round <n>: code-reviewer clear,
+security-auditor clear, test-engineer clear`, each one `clear` or
+`blocking` as that round returned it, or `Reviews: none, documentation
+only`.
 
 `Needs:` and `Shared code:` only when they apply (step 4); every other
 line always. A report asks for nothing: merging and applying stay the

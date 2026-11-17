@@ -24,6 +24,20 @@
       "author": {
         "name": "sergioaten"
       }
+    },
+    {
+      "name": "agent-skills",
+      "displayName": "agent-skills",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/addyosmani/agent-skills.git",
+        "ref": "0.6.16",
+        "sha": "39b723ceebf81474d0557c1fecd01eddab585563"
+      },
+      "description": "Engineering skills, reviewer agents and commands for spec-driven, test-driven development",
+      "author": {
+        "name": "Addy Osmani"
+      }
     }
   ]
 }
