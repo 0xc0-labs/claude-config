@@ -5,11 +5,11 @@ Claude Code marketplace and plugin for the `0xc0-labs` organization.
 ```
 .claude-plugin/marketplace.json   the marketplace
 plugins/0xc0/                  the plugin
-plugins/software-architecture/ the architecture skills plugin
   skills/                         3 skills
-agent-skills                   Addy Osmani's plugin, served from its own repo, pinned
   references/                     what more than one skill links to
   hooks/                          guardrails, commit and branch conventions, board loader
+plugins/software-architecture/ the architecture skills plugin
+agent-skills                   Addy Osmani's plugin, served from its own repo, pinned
 ```
 
 ## Installing
