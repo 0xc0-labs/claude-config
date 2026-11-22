@@ -258,11 +258,19 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   its own issue; and the Never list. Where agent-skills' instructions and
   these differ, these win.
 
+  0. **Naming a skill means loading it.** Where this list names a skill, the
+     session loads it with the Skill tool, by its full name
+     (`agent-skills:<skill>`), before that step's first file change, once in
+     the session. Doing the step "in the spirit of" a skill, or from memory
+     of it, is not using it: nothing shows afterwards that it was read, and
+     the report's `Skills:` line (step 6) lists only what was loaded.
+     A skill the repo's settings deny (point 4) is not loaded.
   1. **Spec first, for a Feature.** When the issue's type is Feature, the
      branch's first commit adds `spec/<feature>.md` and nothing else, as
      `docs(spec): plan <feature>`. The session writes it after the
      exploration and before any other file changes, with
-     `spec-driven-development` and `planning-and-task-breakdown`: the spec,
+     `agent-skills:spec-driven-development` and
+     `agent-skills:planning-and-task-breakdown`, loaded first: the spec,
      the plan and the task list in that one file. No `SPEC.md`, no
      `tasks/plan.md`, no `tasks/todo.md`: those are the skills' defaults,
      which yield to a project's convention, and this is it. Later commits
@@ -275,9 +283,23 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
      (step 3), not an assumption in the spec and not an interview:
      `interview-me` and `idea-refine` are for a session the operator opened
      by hand.
-  3. **Building.** `incremental-implementation` and
-     `test-driven-development`, and the plugin's other skills as their
-     descriptions call for them.
+  3. **Building.** `agent-skills:incremental-implementation` and
+     `agent-skills:test-driven-development`, loaded before the first file
+     change of the build, and the plugin's other skills as their
+     descriptions call for them, each loaded when its step starts.
+  3b. **Architecture, where the repo enables `software-architecture`.** A
+     repo does when its `.claude/settings.json` enables
+     `software-architecture@0xc0-labs`. Before it designs a change that adds
+     or changes a port or an adapter's boundary, an entity, value object,
+     aggregate or domain event, or an HTTP operation (an endpoint, or an
+     OpenAPI document), and before the spec of a Feature that does, the
+     session loads the matching skill:
+     `software-architecture:hexagonal-architecture`,
+     `software-architecture:domain-driven-design`,
+     `software-architecture:rest-api-design`. A fix inside one function,
+     tests, documents and configuration do not need them. A Feature's spec
+     names the skills its design followed. The review (point 6) checks the
+     diff against the same skills.
   4. **Five skills yield to the org's rules**, and the repo's settings deny
      them (`Skill(agent-skills:<skill>)`): `git-workflow-and-versioning`
      (commits, branches and PRs are the workspace's `CLAUDE.md`),
@@ -297,7 +319,13 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
      `agent-skills:security-auditor` and `agent-skills:test-engineer`. Each
      is given the issue's acceptance criteria and how to read the change
      (`git diff origin/main...HEAD`), and is told to report in its own
-     format and to change no file. A blocking finding is:
+     format and to change no file. For a diff that touches the code point
+     3b names, the `code-reviewer`'s brief also asks for a review against
+     those skills' rules and names the skills to load itself with the Skill
+     tool: its definition limits no tools, so it can. If its first answer
+     says it could not load one, the session puts that skill's checklist in
+     the brief and says so in the PR. A departure from a rule is a finding
+     the reviewer rates like any other. A blocking finding is:
 
      | Reviewer | Blocking |
      |---|---|
@@ -441,10 +469,14 @@ Questions: <for the orchestrator or the operator, or none>
 ```
 
 In a repo that carries agent-skills, the `Done:` line ends with the
-reviews, in one form: `Reviews: round <n>: code-reviewer clear,
-security-auditor clear, test-engineer clear`, each one `clear` or
-`blocking` as that round returned it, or `Reviews: none, documentation
-only`.
+skills the session loaded and then the reviews, each in one form.
+`Skills: <full names, comma-separated>` lists what the Skill tool loaded
+(`agent-skills:test-driven-development`,
+`software-architecture:rest-api-design`), or `Skills: none`; a name appears
+only if it was loaded, not if it was merely followed from memory.
+`Reviews: round <n>: code-reviewer clear, security-auditor clear,
+test-engineer clear`, each one `clear` or `blocking` as that round returned
+it, or `Reviews: none, documentation only`.
 
 `Needs:` and `Shared code:` only when they apply (step 4); every other
 line always. A report asks for nothing: merging and applying stay the
