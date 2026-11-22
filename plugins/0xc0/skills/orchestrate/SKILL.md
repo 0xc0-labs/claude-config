@@ -186,6 +186,11 @@ A session reports in a fixed shape (`work-issue`, step 6): its PR, checks,
 what it did and did not do, and, when they apply, `Needs:`, `Shared code:`
 and its questions. One the autopilot started has ended by then.
 
+- **`Skills:`** (on the `Done:` line, in a repo that carries agent-skills):
+  the skills the session loaded. A Feature with `Skills: none` is asked why,
+  in the issue: it should have loaded the spec and build skills at least.
+  So is a change to a port, an entity or an HTTP operation, in a repo that
+  enables `software-architecture`, without one of its skills listed.
 - **A question for the operator** goes to the operator, verbatim.
 - **A question about the contract** is answered **in the issue**, as a
   comment. A session still open (`ListAgents`) is told by message to look
