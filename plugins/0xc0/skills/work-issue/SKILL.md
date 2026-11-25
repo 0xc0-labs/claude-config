@@ -192,6 +192,12 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
   (step 7). The orchestrator files that change's issue, links it as
   "blocked by", and sets this one Ready again once the package is
   published, or the change is in.
+- **No spec file without agent-skills.** In a repo whose
+  `.claude/settings.json` does not enable `agent-skills@0xc0-labs`
+  (`gitops`, `.github`, `vault`, `infrastructure`), the session writes no
+  `spec/<feature>.md`, whatever the issue's type, a Feature included: the
+  first commit is the change itself. The spec rule below applies only
+  where agent-skills is enabled.
 - This repo's `CLAUDE.md` and the workspace's rules: Conventional Commits, no
   tooling trailers, the branch from `origin/main` with the issue's name (the
   same in every repo of the change), the checks this repo runs locally. In
@@ -265,7 +271,8 @@ GitHub, below), move it to Blocked, report (step 6), and stop (step 7).
      of it, is not using it: nothing shows afterwards that it was read, and
      the report's `Skills:` line (step 6) lists only what was loaded.
      A skill the repo's settings deny (point 4) is not loaded.
-  1. **Spec first, for a Feature.** When the issue's type is Feature, the
+  1. **Spec first, for a Feature, with agent-skills only.** In this repo,
+     which carries it, when the issue's type is Feature, the
      branch's first commit adds `spec/<feature>.md` and nothing else, as
      `docs(spec): plan <feature>`. The session writes it after the
      exploration and before any other file changes, with
